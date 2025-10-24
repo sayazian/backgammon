@@ -36,17 +36,22 @@
                     th:data-email="${onlineUser.email}"
                     th:data-userid="${onlineUser.userId}"
                     th:data-status="${onlineUser.inGame} ? 'IN_GAME' : 'FREE'">
-                    <button type="button"
-                            class="user-card__button"
-                            th:disabled="${onlineUser.inGame}"
-                            th:title="${onlineUser.inGame} ? 'Player is currently in a game' : 'Invite to game'">
-                        <span class="user-card__name" th:text="${onlineUser.username}">Opponent</span>
-                        <span class="status-badge"
-                              th:text="${onlineUser.inGame} ? 'In a game' : 'Free'"
-                              th:classappend="${onlineUser.inGame} ? ' status-badge--busy' : ' status-badge--free'">
-                            Free
-                        </span>
-                    </button>
+                    <div class="user-card__content">
+                        <div>
+                            <span class="user-card__name" th:text="${onlineUser.username}">Opponent</span>
+                            <span class="status-badge"
+                                  th:text="${onlineUser.inGame} ? 'In a game' : 'Free'"
+                                  th:classappend="${onlineUser.inGame} ? ' status-badge--busy' : ' status-badge--free'">
+                                Free
+                            </span>
+                        </div>
+                        <button type="button"
+                                class="invite-button"
+                                th:disabled="${onlineUser.inGame}"
+                                th:title="${onlineUser.inGame} ? 'Player is currently in a game' : 'Invite to game'">
+                            Invite to game
+                        </button>
+                    </div>
                 </li>
             </ul>
         </section>
@@ -149,8 +154,8 @@
         }
 
         function attachInviteHandlers() {
-            var userCards = document.querySelectorAll('.user-card.available .user-card__button');
-            userCards.forEach(function (button) {
+            var inviteButtons = document.querySelectorAll('.user-card.available .invite-button');
+            inviteButtons.forEach(function (button) {
                 button.addEventListener('click', function () {
                     var card = button.closest('.user-card');
                     var inviteeEmail = card ? card.dataset.email : null;

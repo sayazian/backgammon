@@ -44,6 +44,12 @@ public class Game {
     @Column(name = "user2_score")
     private Integer user2Score;
 
+    @Column(name = "completed")
+    private Boolean completed = Boolean.FALSE;
+
+    @Column(name = "winner_user_id")
+    private Long winnerUserId;
+
     @OneToMany(mappedBy = "game")
     private List<Turn> turns = new ArrayList<>();
 
@@ -97,6 +103,22 @@ public class Game {
 
     public void setUser2Score(Integer user2Score) {
         this.user2Score = user2Score;
+    }
+
+    public Boolean getCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(Boolean completed) {
+        this.completed = completed;
+    }
+
+    public Long getWinnerUserId() {
+        return winnerUserId;
+    }
+
+    public void setWinnerUserId(Long winnerUserId) {
+        this.winnerUserId = winnerUserId;
     }
 
     public List<Turn> getTurns() {

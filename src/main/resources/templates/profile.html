@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" th:href="@{/css/style.css}">
+    <title>Profile</title>
+</head>
+<body>
+<div class="profile-page">
+    <header class="profile-header">
+        <h1>Profile</h1>
+        <a class="button-link button-link--ghost" href="/dashboard">Back to Dashboard</a>
+    </header>
+
+    <section class="profile-section">
+        <h2>Your Details</h2>
+        <form th:action="@{/profile}" method="post" class="profile-form" th:object="${profileForm}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <div class="form-row">
+                <label for="username">Display Name</label>
+                <input id="username" type="text" th:field="*{username}" maxlength="100" required>
+                <div class="form-error" th:if="${#fields.hasErrors('username')}"
+                     th:errors="*{username}">Invalid username</div>
+            </div>
+            <div class="form-row">
+                <label>Email</label>
+                <span th:text="${profile.email()}">user@example.com</span>
+            </div>
+            <div class="form-row">
+                <label>Joined</label>
+                <span th:text="${#temporals.format(profile.joinDate(), 'MMM d, yyyy')}">Jan 1, 2024</span>
+            </div>
+            <div class="form-actions">
+                <button class="button-link" type="submit">Save Changes</button>
+            </div>
+        </form>
+        <div class="flash-message" th:if="${message}" th:text="${message}"></div>
+    </section>
+
+    <section class="profile-section">
+        <h2>Game History</h2>
+        <div class="history-cards">
+            <div class="history-card">
+                <span class="history-card__label">Games Played</span>
+                <span class="history-card__value" th:text="${profile.completedGames()}">0</span>
+            </div>
+            <div class="history-card">
+                <span class="history-card__label">Wins</span>
+                <span class="history-card__value history-card__value--win" th:text="${profile.wins()}">0</span>
+            </div>
+            <div class="history-card">
+                <span class="history-card__label">Losses</span>
+                <span class="history-card__value history-card__value--loss" th:text="${profile.losses()}">0</span>
+            </div>
+        </div>
+    </section>
+</div>
+</body>
+</html>
