@@ -251,3 +251,136 @@ body {
     justify-content: center;
     gap: 1rem;
 }
+
+.game-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 3rem 2rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    color: #292929;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.game-header h1 {
+    font-size: 2.25rem;
+}
+
+.game-section {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 18px;
+    padding: 2rem;
+    box-shadow: rgba(17, 17, 26, 0.1) 0px 8px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.game-section h2 {
+    font-size: 1.4rem;
+}
+
+.board-wrapper {
+    background: #111;
+    border-radius: 20px;
+    padding: 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.board-row {
+    display: grid;
+    grid-template-columns: repeat(13, minmax(42px, 1fr));
+    gap: 0.6rem;
+}
+
+.board-slot {
+    background: #fff;
+    border-radius: 10px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #292929;
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.board-slot--occupied {
+    background: #e6edf5;
+}
+
+.board-slot--player1 {
+    background: #d7e8c7;
+}
+
+.board-slot--player2 {
+    background: #cddbf4;
+}
+
+.board-slot__value {
+    font-size: 1.1rem;
+}
+
+.dice-panel {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dice-values {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.dice-value {
+    width: 60px;
+    height: 60px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #292929;
+}
+
+.dice-roll {
+    padding: 0.8rem 1.4rem;
+    border: none;
+    border-radius: 12px;
+    background: #ded2f8;
+    color: #2f2259;
+    font-weight: 600;
+    cursor: not-allowed;
+}
+
+.turn-panel {
+    display: inline-flex;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+}
+
+.turn-player {
+    padding: 0.8rem 1.6rem;
+    background: #f1f1f1;
+    color: #444;
+    font-weight: 600;
+}
+
+.turn-player--active {
+    background: #fbe29d;
+    color: #292929;
+    box-shadow: inset 0 0 0 3px #ffb500;
+}

@@ -6,14 +6,53 @@
     <title>Backgammon Game</title>
 </head>
 <body>
-<div class="main">
-    <div class="container">
+<div class="game-page">
+    <header class="game-header">
         <h1>Game Board</h1>
-        <p>The game interface will be implemented here.</p>
-        <nav>
-            <a href="/dashboard">Back to Dashboard</a>
-        </nav>
-    </div>
+        <a class="button-link button-link--ghost" href="/dashboard">Back to Dashboard</a>
+    </header>
+
+    <section class="game-section">
+        <h2>Board</h2>
+        <div class="board-wrapper">
+            <div class="board-row board-row--top">
+                <div class="board-slot"
+                     th:each="point, iterStat : ${topPoints}"
+                     th:classappend="${point.count() > 0} ? (${point.owner()} == 'PLAYER1' ? ' board-slot--player1' : (${point.owner()} == 'PLAYER2' ? ' board-slot--player2' : ' board-slot--occupied')) : ''">
+                    <span class="board-slot__value" th:text="${point.count()}">0</span>
+                </div>
+            </div>
+            <div class="board-row board-row--bottom">
+                <div class="board-slot"
+                     th:each="point, iterStat : ${bottomPoints}"
+                     th:classappend="${point.count() > 0} ? (${point.owner()} == 'PLAYER1' ? ' board-slot--player1' : (${point.owner()} == 'PLAYER2' ? ' board-slot--player2' : ' board-slot--occupied')) : ''">
+                    <span class="board-slot__value" th:text="${point.count()}">0</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="game-section">
+        <h2>Dice</h2>
+        <div class="dice-panel">
+            <div class="dice-values">
+                <div class="dice-value" th:each="die : ${dice}" th:text="${die}">6</div>
+            </div>
+            <button class="dice-roll" type="button" disabled>Roll</button>
+        </div>
+    </section>
+
+    <section class="game-section">
+        <h2>Turn</h2>
+        <div class="turn-panel">
+            <div class="turn-player"
+                 th:each="player : ${players}"
+                 th:text="${player}"
+                 th:classappend="${player} == ${currentPlayer} ? ' turn-player--active' : ''">
+                Player 1
+            </div>
+        </div>
+    </section>
 </div>
 </body>
 </html>

@@ -2,11 +2,8 @@ package com.coderscampus.backgammon.service;
 
 import com.coderscampus.backgammon.domain.User;
 import com.coderscampus.backgammon.repository.UserRepository;
-import com.coderscampus.backgammon.web.dto.OnlineUserView;
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -89,14 +86,6 @@ public class UserService {
             name = oauth2User.getAttribute("email");
         }
         return name;
-    }
-
-    @Transactional(readOnly = true)
-    public List<OnlineUserView> getUsersForDashboard(String currentUserEmail) {
-        return userRepository.findAll().stream()
-                .filter(user -> user.getEmail() != null && !user.getEmail().equalsIgnoreCase(currentUserEmail))
-                .map(user -> new OnlineUserView(user.getUserId(), user.getUsername(), user.getEmail(), false))
-                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

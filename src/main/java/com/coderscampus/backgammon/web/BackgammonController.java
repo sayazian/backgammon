@@ -1,8 +1,9 @@
 package com.coderscampus.backgammon.web;
 
+import com.coderscampus.backgammon.service.OnlineUserRegistry;
 import com.coderscampus.backgammon.service.UserService;
 import com.coderscampus.backgammon.web.dto.OnlineUserView;
-import java.util.Collections;
+import com.coderscampus.backgammon.web.dto.PointView;
 import java.util.List;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,9 +18,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class BackgammonController {
 
     private final UserService userService;
+    private final OnlineUserRegistry onlineUserRegistry;
 
-    public BackgammonController(UserService userService) {
+    public BackgammonController(UserService userService, OnlineUserRegistry onlineUserRegistry) {
         this.userService = userService;
+        this.onlineUserRegistry = onlineUserRegistry;
     }
 
     @GetMapping("/")
@@ -36,9 +39,7 @@ public class BackgammonController {
             return "redirect:/";
         }
         String email = extractEmail(authentication);
-        List<OnlineUserView> onlineUsers = email == null
-                ? Collections.emptyList()
-                : userService.getUsersForDashboard(email);
+        List<OnlineUserView> onlineUsers = onlineUserRegistry.listOthers(email);
         String displayName = extractName(authentication);
         Long currentUserId = email == null
                 ? null
@@ -60,6 +61,11 @@ public class BackgammonController {
             return "redirect:/";
         }
         model.addAttribute("userName", extractName(authentication));
+        model.addAttribute("topPoints", sampleTopPoints());
+        model.addAttribute("bottomPoints", sampleBottomPoints());
+        model.addAttribute("dice", List.of(6, 6));
+        model.addAttribute("players", List.of("Player 1", "Player 2"));
+        model.addAttribute("currentPlayer", "Player 1");
         return "game";
     }
 
@@ -122,5 +128,41 @@ public class BackgammonController {
         return authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken;
+    }
+
+    private List<PointView> sampleTopPoints() {
+        return List.of(
+                new PointView("PLAYER1", 0),
+                new PointView("PLAYER2", 2),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("PLAYER1", 5),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("PLAYER2", 3),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("PLAYER1", 5)
+        );
+    }
+
+    private List<PointView> sampleBottomPoints() {
+        return List.of(
+                new PointView("PLAYER2", 0),
+                new PointView("PLAYER1", 2),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("PLAYER2", 5),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("PLAYER1", 3),
+                new PointView("NONE", 0),
+                new PointView("NONE", 0),
+                new PointView("PLAYER2", 5)
+        );
     }
 }
