@@ -22,3 +22,7 @@ MYSQL_PUBLIC_URL mysql://root:epcGJJVhAsNxnboXlTIYBqWQLWhJBEbc@centerbeam.proxy.
 MYSQL_ROOT_PASSWORD  epcGJJVhAsNxnboXlTIYBqWQLWhJBEbc
 
 MYSQL_URL mysql://root:epcGJJVhAsNxnboXlTIYBqWQLWhJBEbc@mysql.railway.internal:3306/railway
+
+http://backgammon-production.up.railway.app/login/oauth2/code/google
+
+http://backgammon-production.up.railway.app/login/oauth2/code/google
