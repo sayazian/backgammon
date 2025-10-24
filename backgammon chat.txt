@@ -14,3 +14,11 @@ Create a controller under web package. Create three views called login, dashboar
 Gave a description of the dashboard page according to the project layout
 
 
+
+MYSQL_DATABASE.  railway
+
+MYSQL_PUBLIC_URL mysql://root:epcGJJVhAsNxnboXlTIYBqWQLWhJBEbc@centerbeam.proxy.rlwy.net:19068/railway
+
+MYSQL_ROOT_PASSWORD  epcGJJVhAsNxnboXlTIYBqWQLWhJBEbc
+
+MYSQL_URL mysql://root:epcGJJVhAsNxnboXlTIYBqWQLWhJBEbc@mysql.railway.internal:3306/railway
