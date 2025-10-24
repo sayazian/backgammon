@@ -1,8 +1,8 @@
 package com.coderscampus.backgammon.config;
 
+import com.coderscampus.backgammon.web.LoginSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -15,7 +15,8 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                            ClientRegistrationRepository clientRegistrationRepository) throws Exception {
+                                            ClientRegistrationRepository clientRegistrationRepository,
+                                            LoginSuccessHandler loginSuccessHandler) throws Exception {
         DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
                 new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
         authorizationRequestResolver.setAuthorizationRequestCustomizer(builder ->
@@ -23,13 +24,17 @@ public class SecurityConfig {
 
         return http
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/").permitAll();
+                    auth.requestMatchers("/", "/css/**", "/js/**", "/images/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(endpoint ->
-                                endpoint.authorizationRequestResolver(authorizationRequestResolver)))
-                .formLogin(Customizer.withDefaults())
+                                endpoint.authorizationRequestResolver(authorizationRequestResolver))
+                        .successHandler(loginSuccessHandler))
+                .formLogin(form -> form
+                        .loginPage("/")
+                        .successHandler(loginSuccessHandler)
+                        .permitAll())
                 .logout(logout -> logout
                         .logoutSuccessUrl("/")
                         .clearAuthentication(true)
