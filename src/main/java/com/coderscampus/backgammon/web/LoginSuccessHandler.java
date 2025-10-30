@@ -6,7 +6,9 @@ import com.coderscampus.backgammon.service.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,12 +32,14 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
+        HttpSession session = request.getSession(true);
+        session.setMaxInactiveInterval((int) Duration.ofMinutes(1).getSeconds());
         userService.recordLogin(authentication);
-        registerOnline(authentication);
+        registerOnline(authentication, session);
         super.onAuthenticationSuccess(request, response, authentication);
     }
 
-    private void registerOnline(Authentication authentication) {
+    private void registerOnline(Authentication authentication, HttpSession session) {
         if (authentication == null) {
             return;
         }
@@ -43,10 +47,13 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
         if (email == null || email.isBlank()) {
             return;
         }
+        if (session != null) {
+            session.setAttribute("CURRENT_USER_EMAIL", email);
+        }
         Optional<User> userOpt = userService.findByEmail(email);
         Long userId = userOpt.map(User::getUserId).orElse(null);
         String displayName = userService.resolveDisplayName(email, extractName(authentication));
-        onlineUserRegistry.markOnline(userId, displayName, email);
+        onlineUserRegistry.markOnline(userId, displayName, email, session);
     }
 
     private String extractEmail(Authentication authentication) {

@@ -52,7 +52,7 @@ public class ProfileService {
                 .ifPresent(user -> {
                     user.setUsername(newUsername.trim());
                     userRepository.save(user);
-                    onlineUserRegistry.markOnline(user.getUserId(), user.getUsername(), user.getEmail());
+                    onlineUserRegistry.updateDisplayName(user.getEmail(), user.getUsername());
                 });
     }
 

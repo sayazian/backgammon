@@ -27,6 +27,9 @@ public class LogoutSuccessHandler extends SimpleUrlLogoutSuccessHandler {
                                 Authentication authentication) throws IOException, ServletException {
         String email = extractEmail(authentication);
         onlineUserRegistry.markOffline(email);
+        if (request.getSession(false) != null) {
+            onlineUserRegistry.removeBySessionId(request.getSession(false).getId());
+        }
         super.onLogoutSuccess(request, response, authentication);
     }
 

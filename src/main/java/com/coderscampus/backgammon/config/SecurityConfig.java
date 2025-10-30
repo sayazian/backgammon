@@ -2,6 +2,7 @@ package com.coderscampus.backgammon.config;
 
 import com.coderscampus.backgammon.web.LoginSuccessHandler;
 import com.coderscampus.backgammon.web.LogoutSuccessHandler;
+import com.coderscampus.backgammon.web.filter.ActivityTrackingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,7 +19,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             ClientRegistrationRepository clientRegistrationRepository,
                                             LoginSuccessHandler loginSuccessHandler,
-                                            LogoutSuccessHandler logoutSuccessHandler) throws Exception {
+                                            LogoutSuccessHandler logoutSuccessHandler,
+                                            ActivityTrackingFilter activityTrackingFilter) throws Exception {
         DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
                 new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
         authorizationRequestResolver.setAuthorizationRequestCustomizer(builder ->
@@ -42,6 +44,7 @@ public class SecurityConfig {
                         .clearAuthentication(true)
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID"))
+                .addFilterAfter(activityTrackingFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }
