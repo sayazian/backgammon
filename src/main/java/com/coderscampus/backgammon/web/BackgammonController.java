@@ -1,10 +1,15 @@
 package com.coderscampus.backgammon.web;
 
+import com.coderscampus.backgammon.domain.Game;
+import com.coderscampus.backgammon.domain.User;
 import com.coderscampus.backgammon.service.OnlineUserRegistry;
 import com.coderscampus.backgammon.service.UserService;
 import com.coderscampus.backgammon.web.dto.OnlineUserView;
 import com.coderscampus.backgammon.web.dto.PointView;
+import com.coderscampus.backgammon.repository.GameRepository;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,6 +17,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
@@ -19,10 +25,14 @@ public class BackgammonController {
 
     private final UserService userService;
     private final OnlineUserRegistry onlineUserRegistry;
+    private final GameRepository gameRepository;
 
-    public BackgammonController(UserService userService, OnlineUserRegistry onlineUserRegistry) {
+    public BackgammonController(UserService userService,
+                                OnlineUserRegistry onlineUserRegistry,
+                                GameRepository gameRepository) {
         this.userService = userService;
         this.onlineUserRegistry = onlineUserRegistry;
+        this.gameRepository = gameRepository;
     }
 
     @GetMapping("/")
@@ -56,16 +66,57 @@ public class BackgammonController {
     }
 
     @GetMapping("/game")
-    public String game(Authentication authentication, Model model) {
+    public String game(@RequestParam(name = "gameId", required = false) Long gameId,
+                       Authentication authentication,
+                       Model model) {
         if (isAnonymous(authentication)) {
             return "redirect:/";
         }
-        model.addAttribute("userName", extractName(authentication));
+        String viewerEmail = extractEmail(authentication);
+        String fallbackName = extractName(authentication);
+        String viewerDisplayName = userService.resolveDisplayName(viewerEmail, fallbackName);
+        if (viewerDisplayName == null || viewerDisplayName.isBlank()) {
+            viewerDisplayName = fallbackName != null && !fallbackName.isBlank() ? fallbackName : "You";
+        }
+
+        User viewerUser = null;
+        User opponentUser = null;
+        String opponentDisplayName = "Opponent";
+        if (gameId != null) {
+            Optional<Game> maybeGame = gameRepository.findById(gameId);
+            if (maybeGame.isPresent()) {
+                Game game = maybeGame.get();
+                viewerUser = resolveViewer(game, viewerEmail);
+                opponentUser = resolveOpponent(game, viewerUser, viewerEmail);
+                if (viewerUser != null) {
+                    viewerDisplayName = userService.resolveDisplayName(viewerUser.getEmail(), viewerUser.getUsername());
+                }
+                if (opponentUser != null) {
+                    opponentDisplayName = userService.resolveDisplayName(opponentUser.getEmail(), opponentUser.getUsername());
+                }
+            }
+        }
+        if (opponentDisplayName == null || opponentDisplayName.isBlank()) {
+            opponentDisplayName = "Opponent";
+        }
+        List<String> players = List.of(viewerDisplayName, opponentDisplayName);
+
+        String viewerStateKey = resolveStateKey(viewerUser, viewerDisplayName, viewerEmail);
+        String opponentEmail = opponentUser != null ? opponentUser.getEmail() : null;
+        String opponentStateKey = resolveStateKey(opponentUser, opponentDisplayName, opponentEmail);
+
+        model.addAttribute("userName", viewerDisplayName);
+        model.addAttribute("viewerName", viewerDisplayName);
+        model.addAttribute("opponentName", opponentDisplayName);
+        model.addAttribute("viewerStateKey", viewerStateKey);
+        model.addAttribute("opponentStateKey", opponentStateKey);
         model.addAttribute("topPoints", sampleTopPoints());
         model.addAttribute("bottomPoints", sampleBottomPoints());
-        model.addAttribute("dice", List.of(6, 6));
-        model.addAttribute("players", List.of("Player 1", "Player 2"));
-        model.addAttribute("currentPlayer", "Player 1");
+        model.addAttribute("dice", List.of(0, 0));
+        model.addAttribute("players", players);
+        model.addAttribute("currentPlayer", null);
+        model.addAttribute("previewMode", false);
+        model.addAttribute("gamePreviewKey", determineGameKey(gameId, viewerUser, opponentUser, viewerEmail, opponentDisplayName));
         return "game";
     }
 
@@ -164,5 +215,82 @@ public class BackgammonController {
                 new PointView("NONE", 0),
                 new PointView("PLAYER2", 5)
         );
+    }
+
+    private User resolveViewer(Game game, String viewerEmail) {
+        if (viewerEmail == null || viewerEmail.isBlank()) {
+            return null;
+        }
+        if (game.getUser1() != null && viewerEmail.equalsIgnoreCase(game.getUser1().getEmail())) {
+            return game.getUser1();
+        }
+        if (game.getUser2() != null && viewerEmail.equalsIgnoreCase(game.getUser2().getEmail())) {
+            return game.getUser2();
+        }
+        return null;
+    }
+
+    private User resolveOpponent(Game game, User viewerUser, String viewerEmail) {
+        if (viewerUser != null) {
+            return viewerUser == game.getUser1() ? game.getUser2() : game.getUser1();
+        }
+        if (viewerEmail != null && !viewerEmail.isBlank()) {
+            if (game.getUser1() != null && !viewerEmail.equalsIgnoreCase(game.getUser1().getEmail())) {
+                return game.getUser1();
+            }
+            if (game.getUser2() != null && !viewerEmail.equalsIgnoreCase(game.getUser2().getEmail())) {
+                return game.getUser2();
+            }
+        }
+        return null;
+    }
+
+    private String resolveStateKey(User user, String displayName, String fallbackEmail) {
+        if (user != null) {
+            if (user.getUserId() != null) {
+                return "user#" + user.getUserId();
+            }
+            if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                return "email#" + user.getEmail().toLowerCase(Locale.ENGLISH);
+            }
+        }
+        if (fallbackEmail != null && !fallbackEmail.isBlank()) {
+            return "email#" + fallbackEmail.toLowerCase(Locale.ENGLISH);
+        }
+        if (displayName != null && !displayName.isBlank()) {
+            return "name#" + displayName.trim().toLowerCase(Locale.ENGLISH);
+        }
+        return null;
+    }
+
+    private String determineGameKey(Long gameId,
+                                    User viewerUser,
+                                    User opponentUser,
+                                    String viewerEmail,
+                                    String opponentDisplayName) {
+        if (gameId == null) {
+            return null;
+        }
+        String viewerKey = (viewerUser != null && viewerUser.getEmail() != null)
+                ? viewerUser.getEmail().toLowerCase()
+                : viewerEmail != null ? viewerEmail.toLowerCase() : null;
+        String opponentKey = (opponentUser != null && opponentUser.getEmail() != null)
+                ? opponentUser.getEmail().toLowerCase()
+                : opponentDisplayName != null ? opponentDisplayName.toLowerCase() : null;
+
+        if (viewerKey == null && opponentKey == null) {
+            return "game-" + gameId;
+        }
+
+        if (viewerKey != null && opponentKey != null) {
+            if (viewerKey.compareTo(opponentKey) <= 0) {
+                return "game-" + gameId + ":" + viewerKey + "|" + opponentKey;
+            } else {
+                return "game-" + gameId + ":" + opponentKey + "|" + viewerKey;
+            }
+        }
+
+        String singleKey = viewerKey != null ? viewerKey : opponentKey;
+        return "game-" + gameId + ":" + singleKey;
     }
 }

@@ -28,7 +28,7 @@ public class SecurityConfig {
 
         return http
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/", "/css/**", "/js/**", "/images/**").permitAll();
+                    auth.requestMatchers("/", "/css/**", "/js/**", "/images/**", "/preview/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .oauth2Login(oauth2 -> oauth2

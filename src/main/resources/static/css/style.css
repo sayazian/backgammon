@@ -229,6 +229,19 @@ body {
     border: 2px solid #292929;
 }
 
+.button-link--disabled,
+.button-link[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.button-link--ghost.button-link--disabled,
+.button-link--ghost[disabled] {
+    border-color: rgba(41, 41, 41, 0.4);
+    color: rgba(41, 41, 41, 0.65);
+}
+
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -343,37 +356,124 @@ body {
 
 .dice-panel {
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 2rem;
 }
 
-.dice-values {
+.dice-phase {
+    flex: 1 1 280px;
     display: flex;
-    gap: 0.5rem;
+    justify-content: center;
+}
+
+.dice-phase--initial {
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.dice-phase--turn {
+    display: none;
+}
+
+.dice-phase--turn.is-visible {
+    display: flex;
+}
+
+.dice-player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 160px;
+}
+
+.dice-player__label {
+    font-weight: 600;
+    font-size: 1.05rem;
 }
 
 .dice-value {
-    width: 60px;
-    height: 60px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+    width: 68px;
+    height: 68px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
-    font-weight: 600;
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: #ffffff;
     color: #292929;
+    box-shadow: rgba(17, 17, 26, 0.1) 0px 4px 16px;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.dice-value--idle {
+    background: #d7dce5;
+    color: #5a6473;
+}
+
+.dice-value--rolled {
+    background: #fdf0d5;
+    color: #c35b12;
+    transform: translateY(-4px);
 }
 
 .dice-roll {
-    padding: 0.8rem 1.4rem;
+    padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: 12px;
-    background: #ded2f8;
-    color: #2f2259;
+    border-radius: 999px;
+    background: #5e60ce;
+    color: #ffffff;
     font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.dice-roll:hover:enabled {
+    transform: translateY(-2px);
+    box-shadow: rgba(94, 96, 206, 0.35) 0px 8px 20px;
+}
+
+.dice-roll--disabled,
+.dice-roll:disabled {
+    opacity: 0.55;
     cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.dice-turn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 320px;
+}
+
+.dice-turn__header {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #313131;
+}
+
+.dice-turn__values {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.dice-turn__values.is-disabled .dice-value {
+    background: #d7dce5;
+    color: #7a8597;
+    transform: none;
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.dice-turn__status {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #5a6473;
+    text-align: center;
 }
 
 .turn-panel {
