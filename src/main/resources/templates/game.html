@@ -8,7 +8,10 @@
 <body>
 <div class="game-page">
     <header class="game-header">
-        <h1>Game Board</h1>
+        <h1 th:if="${#strings.isEmpty(#strings.trim(viewerName))}">Your Game Board</h1>
+        <h1 th:unless="${#strings.isEmpty(#strings.trim(viewerName))}">
+            <span th:text="${viewerName}">Player</span>'s Game Board
+        </h1>
         <a class="button-link button-link--ghost" href="/dashboard">Back to Dashboard</a>
     </header>
 
@@ -34,11 +37,41 @@
 
     <section class="game-section">
         <h2>Dice</h2>
-        <div class="dice-panel">
-            <div class="dice-values">
-                <div class="dice-value" th:each="die : ${dice}" th:text="${die}">6</div>
+        <div class="dice-panel"
+             th:attr="data-viewer-name=${viewerName}, data-opponent-name=${opponentName},
+                      data-viewer-key=${viewerStateKey}, data-opponent-key=${opponentStateKey},
+                      data-game-key=${gamePreviewKey}, data-game-channel=${gameChannelKey}">
+            <div class="dice-actions">
+                <button class="button-link button-link--ghost" type="button" data-role="dice-reset">Restart Game</button>
             </div>
-            <button class="dice-roll" type="button" disabled>Roll</button>
+            <div class="dice-phase dice-phase--initial" data-role="initial-phase">
+                <div class="dice-player" data-player-role="viewer">
+                    <span class="dice-player__label" th:text="${viewerName}">You</span>
+                    <div class="dice-value dice-value--idle" data-role="initial-die" data-player="viewer">0</div>
+                    <button class="dice-roll" type="button" data-role="initial-roll" data-player="viewer">Roll</button>
+                </div>
+                <div class="dice-player" data-player-role="opponent">
+                    <span class="dice-player__label" th:text="${opponentName}">Opponent</span>
+                    <div class="dice-value dice-value--idle" data-role="initial-die" data-player="opponent">0</div>
+                    <button class="dice-roll" type="button" data-role="initial-roll" data-player="opponent">Roll</button>
+                </div>
+                <p class="dice-turn__status" data-role="initial-status">
+                    Each player rolls once to determine who starts the game.
+                </p>
+            </div>
+            <div class="dice-phase dice-phase--turn" data-role="turn-phase">
+                <div class="dice-turn">
+                    <div class="dice-turn__header" data-role="turn-header">Starting Roll</div>
+                    <div class="dice-turn__values is-disabled" data-role="turn-values">
+                        <div class="dice-value dice-value--idle" data-role="turn-die" data-index="0">0</div>
+                        <div class="dice-value dice-value--idle" data-role="turn-die" data-index="1">0</div>
+                    </div>
+                    <button class="dice-roll" type="button" data-role="turn-roll" disabled>Roll Both Dice</button>
+                    <p class="dice-turn__status" data-role="turn-status">
+                        Waiting for the starting roll.
+                    </p>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -46,7 +79,8 @@
         <h2>Turn</h2>
         <div class="turn-panel">
             <div class="turn-player"
-                 th:each="player : ${players}"
+                 th:each="player, iterStat : ${players}"
+                 th:attr="data-player-role=${iterStat.index == 0 ? 'viewer' : 'opponent'}"
                  th:text="${player}"
                  th:classappend="${player} == ${currentPlayer} ? ' turn-player--active' : ''">
                 Player 1
@@ -54,5 +88,879 @@
         </div>
     </section>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+    (function () {
+        'use strict';
+
+        var dicePanel = document.querySelector('.dice-panel');
+        if (!dicePanel) {
+            return;
+        }
+
+        var names = {
+            viewer: dicePanel.dataset.viewerName || 'You',
+            opponent: dicePanel.dataset.opponentName || 'Opponent'
+        };
+
+        var keys = {
+            viewer: dicePanel.dataset.viewerKey || null,
+            opponent: dicePanel.dataset.opponentKey || null,
+            game: dicePanel.dataset.gameKey || null,
+            channel: dicePanel.dataset.gameChannel || null
+        };
+
+        var mode = (keys.channel && typeof SockJS !== "undefined" && typeof Stomp !== "undefined") ? "network" : "local";
+        var stompClient = null;
+        var subscription = null;
+        var own = Object.prototype.hasOwnProperty;
+
+        var state = {
+            initialRolls: {
+                viewer: null,
+                opponent: null
+            },
+            starter: null,
+            currentTurn: null
+        };
+        var connection = {
+            attempts: 0,
+            maxAttempts: 4,
+            retryDelay: 2000,
+            reconnectTimer: null,
+            forceLocal: false
+        };
+        var activity = {
+            timeoutMs: 5 * 60 * 1000,
+            timer: null,
+            expired: false,
+            last: Date.now()
+        };
+
+        var initialDice = {
+            viewer: dicePanel.querySelector('[data-role="initial-die"][data-player="viewer"]'),
+            opponent: dicePanel.querySelector('[data-role="initial-die"][data-player="opponent"]')
+        };
+
+        var initialButtons = {
+            viewer: dicePanel.querySelector('[data-role="initial-roll"][data-player="viewer"]'),
+            opponent: dicePanel.querySelector('[data-role="initial-roll"][data-player="opponent"]')
+        };
+
+        var initialPhase = dicePanel.querySelector('[data-role="initial-phase"]');
+        var initialStatus = dicePanel.querySelector('[data-role="initial-status"]');
+        var turnPhase = dicePanel.querySelector('[data-role="turn-phase"]');
+        var turnHeader = dicePanel.querySelector('[data-role="turn-header"]');
+        var turnValues = dicePanel.querySelector('[data-role="turn-values"]');
+        var turnDice = Array.prototype.slice.call(dicePanel.querySelectorAll('[data-role="turn-die"]'));
+        var turnButton = dicePanel.querySelector('[data-role="turn-roll"]');
+        var turnStatus = dicePanel.querySelector('[data-role="turn-status"]');
+        var turnPlayers = Array.prototype.slice.call(document.querySelectorAll('.turn-player'));
+        var restartButton = dicePanel.querySelector('[data-role="dice-reset"]');
+
+        setButtonState('viewer', true);
+        setButtonState('opponent', mode === 'local');
+
+        attachInitialHandlers();
+        attachTurnHandler();
+        attachRestartHandler();
+
+        if (mode === 'network') {
+            connectSocket();
+        } else {
+            updateInitialStatusMessage();
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        markActivity('init');
+
+        function attachInitialHandlers() {
+            Object.keys(initialButtons).forEach(function (role) {
+                var button = initialButtons[role];
+                if (!button) {
+                    return;
+                }
+                button.addEventListener('click', function () {
+                    if (mode === 'network') {
+                        if (role !== 'viewer') {
+                            return;
+                        }
+                        setButtonState('viewer', false);
+                        sendRollRequest();
+                    } else {
+                        handleLocalRoll(role);
+                    }
+                });
+            });
+        }
+
+        function attachRestartHandler() {
+            if (!restartButton) {
+                return;
+            }
+            restartButton.addEventListener('click', function () {
+                handleRestartRequest();
+            });
+        }
+
+        function attachTurnHandler() {
+            if (!turnButton) {
+                return;
+            }
+            turnButton.addEventListener('click', function () {
+                if (turnButton.disabled) {
+                    return;
+                }
+                var activeRole = state.currentTurn;
+                if (!activeRole || activeRole !== 'viewer') {
+                    return;
+                }
+                if (!state.starter) {
+                    return;
+                }
+                markActivity('viewer-turn-roll');
+                var first = rollDie();
+                var second = rollDie();
+                turnDice.forEach(function (dieEl, index) {
+                    if (!dieEl) {
+                        return;
+                    }
+                    var value = index === 0 ? first : second;
+                    dieEl.textContent = String(value);
+                    dieEl.classList.remove('dice-value--idle');
+                    dieEl.classList.add('dice-value--rolled');
+                });
+                var rollerName = nameForRole(activeRole) || (activeRole === 'viewer' ? 'You' : 'Opponent');
+                var nextRole = activeRole === 'viewer' ? 'opponent' : 'viewer';
+                var nextName = nextRole ? (nameForRole(nextRole) || (nextRole === 'viewer' ? 'You' : 'Opponent')) : null;
+                var summary = rollerName + ' rolled ' + first + ' and ' + second + '.';
+                if (nextName) {
+                    summary += ' ' + nextName + ' now rolls both dice.';
+                }
+                setActiveTurn(nextRole, { message: summary });
+                if (mode === 'network') {
+                    broadcastTurnRoll({
+                        dice: [first, second],
+                        rollerRole: activeRole,
+                        nextRole: nextRole,
+                        message: summary
+                    });
+                }
+            });
+        }
+
+        function handleRestartRequest() {
+            markActivity('restart-click');
+            setRestartButtonState(true);
+            if (mode === 'network') {
+                if (!isSocketConnected()) {
+                    setRestartButtonState(false);
+                    updateInitialStatusMessage('Unable to restart while offline. Retrying connection...');
+                    connectSocket({ retry: true });
+                    return;
+                }
+                sendRestartRequest();
+                return;
+            }
+            resetInitialPhase({ reason: 'reset' });
+            updateInitialStatusMessage((nameForRole('viewer') || 'You') + ' restarted the dice.');
+        }
+
+        function connectSocket(options) {
+            options = options || {};
+            if (mode !== 'network' || connection.forceLocal) {
+                return;
+            }
+            clearReconnectTimer();
+            try {
+                var socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                if (stompClient && typeof stompClient.debug === 'function') {
+                    stompClient.debug = null;
+                }
+                stompClient.connect({}, function () {
+                    connection.attempts = 0;
+                    onSocketConnected(options);
+                }, function () {
+                    handleConnectionFailure('Connection lost.');
+                });
+            } catch (error) {
+                handleConnectionFailure('Unable to establish a connection.');
+            }
+        }
+
+        function onSocketConnected(options) {
+            clearReconnectTimer();
+            var destination = subscriptionDestination();
+            if (!destination) {
+                return;
+            }
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+            subscription = stompClient.subscribe(destination, function (message) {
+                handleIncoming(message);
+            });
+            if (!options || !options.skipStateRequest) {
+                requestCurrentState();
+            }
+            updateInitialStatusMessage();
+        }
+
+        function subscriptionDestination() {
+            if (!keys.channel) {
+                return null;
+            }
+            return '/topic/games/' + keys.channel + '/dice';
+        }
+
+        function sendRollRequest() {
+            if (!stompClient || !stompClient.connected) {
+                setButtonState('viewer', true);
+                return;
+            }
+            var payload = {
+                gameKey: keys.channel,
+                playerKey: keys.viewer,
+                playerName: names.viewer
+            };
+            stompClient.send('/app/game.dice.roll', {}, JSON.stringify(payload));
+        }
+
+        function requestCurrentState() {
+            if (!stompClient || !stompClient.connected) {
+                return;
+            }
+            stompClient.send('/app/game.dice.state', {}, JSON.stringify({ gameKey: keys.channel }));
+        }
+
+        function handleIncoming(message) {
+            if (!message || typeof message.body !== 'string') {
+                return;
+            }
+            var event;
+            try {
+                event = JSON.parse(message.body);
+            } catch (error) {
+                return;
+            }
+            if (!event || !event.type) {
+                return;
+            }
+            switch (event.type) {
+                case 'ROLL':
+                    applyRollEvent(event);
+                    break;
+                case 'RESULT':
+                    applyResultEvent(event);
+                    break;
+                case 'TIE':
+                    applyTieEvent(event);
+                    break;
+                case 'STATE':
+                    applyStateEvent(event);
+                    break;
+                case 'RESET':
+                    applyResetEvent(event);
+                    break;
+                case 'TURN':
+                    applyTurnEvent(event);
+                    break;
+                case 'TIMEOUT':
+                    applyTimeoutEvent(event);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        function applyRollEvent(event) {
+            markActivity('roll-event');
+            updateRolls(event.rolls);
+            var role = roleForKey(event.playerKey);
+            if (role) {
+                state.initialRolls[role] = event.value;
+                applyRollForRole(role, event.value);
+                setButtonState(role, false);
+            }
+            updateInitialStatusMessage(event.message);
+        }
+
+        function applyResultEvent(event) {
+            markActivity('result-event');
+            updateRolls(event.rolls);
+            ['viewer', 'opponent'].forEach(function (role) {
+                var value = valueForRole(event.rolls, role);
+                if (value !== null && value !== undefined) {
+                    state.initialRolls[role] = value;
+                    applyRollForRole(role, value);
+                }
+            });
+            state.starter = roleForKey(event.starterKey);
+            state.currentTurn = state.starter;
+            setButtonState('viewer', false);
+            setButtonState('opponent', false);
+            revealTurnPhase();
+            hideInitialPhase();
+            setActiveTurn(state.currentTurn, {
+                headerName: event.starterName,
+                message: defaultTurnMessage(state.currentTurn)
+            });
+            updateInitialStatusMessage(event.message);
+        }
+
+        function applyTieEvent(event) {
+            markActivity('tie-event');
+            updateRolls(event.rolls);
+            updateInitialStatusMessage(event.message);
+            window.setTimeout(function () {
+                resetInitialPhase({ reason: 'tie' });
+            }, 800);
+        }
+
+        function applyResetEvent(event) {
+            markActivity('reset-event');
+            resetInitialPhase({ reason: 'reset' });
+            if (event && event.message) {
+                updateInitialStatusMessage(event.message);
+            }
+            setRestartButtonState(false);
+        }
+
+        function applyStateEvent(event) {
+            markActivity('state-event');
+            updateRolls(event.rolls);
+            if (event.rolls) {
+                ['viewer', 'opponent'].forEach(function (role) {
+                    var value = valueForRole(event.rolls, role);
+                    if (value !== null && value !== undefined) {
+                        state.initialRolls[role] = value;
+                        applyRollForRole(role, value);
+                        setButtonState(role, false);
+                    }
+                });
+            }
+            if (event.starterKey) {
+                applyResultEvent({
+                    type: 'RESULT',
+                    rolls: event.rolls,
+                    starterKey: event.starterKey,
+                    starterName: event.starterName,
+                    message: event.message
+                });
+                return;
+            }
+            updateInitialStatusMessage(event.message);
+        }
+
+        function updateRolls(rolls) {
+            if (!rolls) {
+                return;
+            }
+            ['viewer', 'opponent'].forEach(function (role) {
+                var value = valueForRole(rolls, role);
+                if (value !== null && value !== undefined) {
+                    state.initialRolls[role] = value;
+                }
+            });
+        }
+
+        function valueForRole(rolls, role) {
+            if (!rolls) {
+                return null;
+            }
+            var key = keyForRole(role);
+            if (key && own.call(rolls, key)) {
+                return rolls[key];
+            }
+            if (own.call(rolls, role)) {
+                return rolls[role];
+            }
+            return null;
+        }
+
+        function handleLocalRoll(role) {
+            markActivity('local-roll');
+            var value = rollDie();
+            state.initialRolls[role] = value;
+            applyRollForRole(role, value);
+            setButtonState(role, false);
+            updateInitialStatusMessage();
+            maybeFinalizeLocal();
+        }
+
+        function maybeFinalizeLocal() {
+            var viewerRoll = state.initialRolls.viewer;
+            var opponentRoll = state.initialRolls.opponent;
+            if (viewerRoll === null || opponentRoll === null) {
+                return;
+            }
+            if (viewerRoll === opponentRoll) {
+                updateInitialStatusMessage('Tie! Both players rolled ' + viewerRoll + '. Roll again.');
+                window.setTimeout(function () {
+                    resetInitialPhase({ reason: 'tie' });
+                }, 800);
+                return;
+            }
+            var starterRole = viewerRoll > opponentRoll ? 'viewer' : 'opponent';
+            var starterKey = starterRole === 'viewer' ? keys.viewer : keys.opponent;
+            var starterName = names[starterRole] || 'Player';
+            var rolls = {};
+            rolls[keys.viewer || 'viewer'] = viewerRoll;
+            rolls[keys.opponent || 'opponent'] = opponentRoll;
+            applyResultEvent({
+                type: 'RESULT',
+                rolls: rolls,
+                starterKey: starterKey,
+                starterName: starterName,
+                message: starterName + ' starts the game.'
+            });
+        }
+
+        function resetInitialPhase(options) {
+            options = options || {};
+            state.initialRolls.viewer = null;
+            state.initialRolls.opponent = null;
+            state.starter = null;
+            state.currentTurn = null;
+            applyRollForRole('viewer', null);
+            applyRollForRole('opponent', null);
+            setButtonState('viewer', true);
+            setButtonState('opponent', mode === 'local');
+            if (turnPhase) {
+                turnPhase.classList.remove('is-visible');
+            }
+            showInitialPhase();
+            turnDice.forEach(function (dieEl) {
+                if (!dieEl) {
+                    return;
+                }
+                dieEl.textContent = '0';
+                dieEl.classList.remove('dice-value--rolled');
+                dieEl.classList.add('dice-value--idle');
+            });
+            setActiveTurn(null);
+            setRestartButtonState(false);
+            if (!options.reason || options.reason === 'reset') {
+                updateInitialStatusMessage();
+            } else if (options.reason === 'tie') {
+                updateInitialStatusMessage('Tie! Roll again to decide who starts.');
+            }
+        }
+
+        function applyRollForRole(role, value) {
+            var dieEl = initialDice[role];
+            if (!dieEl) {
+                return;
+            }
+            if (typeof value === 'number' && value > 0) {
+                dieEl.textContent = String(value);
+                dieEl.classList.remove('dice-value--idle');
+                dieEl.classList.add('dice-value--rolled');
+            } else {
+                dieEl.textContent = '0';
+                dieEl.classList.remove('dice-value--rolled');
+                dieEl.classList.add('dice-value--idle');
+            }
+        }
+
+        function setButtonState(role, enabled) {
+            var button = initialButtons[role];
+            if (!button) {
+                return;
+            }
+            button.disabled = !enabled;
+            if (enabled) {
+                button.classList.remove('dice-roll--disabled');
+            } else {
+                button.classList.add('dice-roll--disabled');
+            }
+        }
+
+        function updateInitialStatusMessage(customText) {
+            if (!initialStatus) {
+                return;
+            }
+            if (typeof customText === 'string' && customText.length > 0) {
+                initialStatus.textContent = customText;
+                return;
+            }
+            var viewerRoll = state.initialRolls.viewer;
+            var opponentRoll = state.initialRolls.opponent;
+            if (viewerRoll === null && opponentRoll === null) {
+                initialStatus.textContent = 'Each player rolls once to determine who starts the game.';
+                return;
+            }
+            if (viewerRoll !== null && opponentRoll === null) {
+                initialStatus.textContent = names.viewer + ' rolled ' + viewerRoll + '. Waiting for ' + names.opponent + '.';
+                return;
+            }
+            if (viewerRoll === null && opponentRoll !== null) {
+                initialStatus.textContent = names.opponent + ' rolled ' + opponentRoll + '. Take your roll.';
+                return;
+            }
+            initialStatus.textContent = 'Comparing rolls...';
+        }
+
+        function revealTurnPhase() {
+            if (turnPhase) {
+                turnPhase.classList.add('is-visible');
+            }
+        }
+
+        function hideInitialPhase() {
+            if (initialPhase) {
+                initialPhase.style.display = 'none';
+            }
+        }
+
+        function showInitialPhase() {
+            if (initialPhase) {
+                initialPhase.style.display = '';
+            }
+        }
+
+        function highlightStarter(role) {
+            turnPlayers.forEach(function (playerEl) {
+                if (!playerEl) {
+                    return;
+                }
+                if (role && playerEl.dataset.playerRole === role) {
+                    playerEl.classList.add('turn-player--active');
+                } else {
+                    playerEl.classList.remove('turn-player--active');
+                }
+            });
+        }
+
+        function setActiveTurn(role, options) {
+            options = options || {};
+            state.currentTurn = role || null;
+            updateTurnHeaderForRole(role, options.headerName);
+            setTurnInteractivity(role, options.message);
+            highlightStarter(role);
+        }
+
+        function setTurnInteractivity(role, customStatus) {
+            var statusText = customStatus || defaultTurnMessage(role);
+            if (turnStatus) {
+                turnStatus.textContent = statusText;
+            }
+            var allowLocalOpponentControl = mode === 'local';
+            var isViewerTurn = role === 'viewer' || (allowLocalOpponentControl && role === 'opponent');
+            if (turnValues) {
+                if (isViewerTurn) {
+                    turnValues.classList.remove('is-disabled');
+                } else {
+                    turnValues.classList.add('is-disabled');
+                }
+            }
+            if (turnButton) {
+                if (isViewerTurn) {
+                    turnButton.disabled = false;
+                    turnButton.classList.remove('dice-roll--disabled');
+                    turnButton.textContent = 'Roll Both Dice';
+                    turnButton.style.visibility = '';
+                } else {
+                    turnButton.disabled = true;
+                    turnButton.classList.add('dice-roll--disabled');
+                    turnButton.textContent = 'Roll Both Dice';
+                    turnButton.style.visibility = 'hidden';
+                }
+            }
+        }
+
+        function defaultTurnMessage(role) {
+            if (!role) {
+                return 'Waiting for the starting roll.';
+            }
+            var playerName = nameForRole(role) || 'Player';
+            if (role === 'viewer') {
+                return 'Roll both dice to begin your turn.';
+            }
+            return playerName + ' now rolls both dice.';
+        }
+
+        function updateTurnHeaderForRole(role, preferredName) {
+            if (!turnHeader) {
+                return;
+            }
+            var label = preferredName;
+            if ((!label || label.length === 0) && role) {
+                label = nameForRole(role);
+            }
+            if (label && label.length > 0) {
+                turnHeader.textContent = label + "'s Dice";
+            } else {
+                turnHeader.textContent = 'Starting Roll';
+            }
+        }
+
+        function nameForRole(role) {
+            if (role === 'viewer') {
+                return names.viewer || 'You';
+            }
+            if (role === 'opponent') {
+                return names.opponent || 'Opponent';
+            }
+            return null;
+        }
+
+        function applyTurnEvent(event) {
+            markActivity('turn-event');
+            if (!event) {
+                return;
+            }
+            var diceValues = Array.isArray(event.diceValues) ? event.diceValues : null;
+            if (diceValues && diceValues.length >= 2) {
+                turnDice.forEach(function (dieEl, index) {
+                    if (!dieEl) {
+                        return;
+                    }
+                    var safeValue = diceValues[index];
+                    safeValue = typeof safeValue === 'number' ? safeValue : parseInt(safeValue, 10);
+                    if (!Number.isFinite(safeValue) || safeValue <= 0) {
+                        safeValue = 0;
+                        dieEl.classList.add('dice-value--idle');
+                        dieEl.classList.remove('dice-value--rolled');
+                    } else {
+                        dieEl.classList.remove('dice-value--idle');
+                        dieEl.classList.add('dice-value--rolled');
+                    }
+                    dieEl.textContent = String(safeValue);
+                });
+            }
+            var nextRole = roleForKey(event.nextPlayerKey);
+            var statusMessage = event.message || defaultTurnMessage(nextRole);
+            setActiveTurn(nextRole, {
+                headerName: event.nextPlayerName,
+                message: statusMessage
+            });
+        }
+
+        function applyTimeoutEvent(event) {
+            activity.expired = true;
+            clearActivityTimer();
+            var message = (event && event.message) ? event.message : 'Game closed due to inactivity.';
+            setActiveTurn(null);
+            setButtonState('viewer', false);
+            setButtonState('opponent', false);
+            setRestartButtonState(true);
+            updateInitialStatusMessage(message);
+            if (turnStatus) {
+                turnStatus.textContent = message;
+            }
+            window.setTimeout(redirectToDashboard, 1500);
+        }
+
+        function broadcastTurnRoll(details) {
+            if (mode !== 'network' || !stompClient || !stompClient.connected) {
+                return;
+            }
+            if (!details || !Array.isArray(details.dice) || details.dice.length < 2) {
+                return;
+            }
+            var payload = {
+                gameKey: keys.channel,
+                rollerKey: keyForRole(details.rollerRole),
+                rollerName: nameForRole(details.rollerRole),
+                diceValues: [details.dice[0], details.dice[1]],
+                nextPlayerKey: keyForRole(details.nextRole),
+                nextPlayerName: nameForRole(details.nextRole),
+                message: details.message
+            };
+            stompClient.send('/app/game.dice.turn', {}, JSON.stringify(payload));
+        }
+
+        function sendRestartRequest() {
+            if (!stompClient || !stompClient.connected) {
+                setRestartButtonState(false);
+                updateInitialStatusMessage('Unable to restart while offline.');
+                return;
+            }
+            var payload = {
+                gameKey: keys.channel,
+                playerKey: keys.viewer,
+                playerName: names.viewer
+            };
+            stompClient.send('/app/game.dice.reset', {}, JSON.stringify(payload));
+        }
+
+        function handleConnectionFailure(reason) {
+            if (mode !== 'network' || connection.forceLocal) {
+                return;
+            }
+            connection.attempts += 1;
+            if (connection.attempts <= connection.maxAttempts) {
+                scheduleReconnect(reason);
+            } else {
+                switchToLocalFallback(reason || 'Connection issue detected. Switched to local dice mode.');
+            }
+        }
+
+        function scheduleReconnect(reason) {
+            if (connection.forceLocal || connection.reconnectTimer) {
+                return;
+            }
+            var delay = Math.min(connection.retryDelay * Math.max(connection.attempts, 1), 8000);
+            connection.reconnectTimer = window.setTimeout(function () {
+                connection.reconnectTimer = null;
+                connectSocket({ retry: true, skipStateRequest: false });
+            }, delay);
+            var statusText = (reason || 'Connection issue detected.') + ' Retrying...';
+            if (state.currentTurn === null) {
+                updateInitialStatusMessage(statusText);
+            } else if (turnStatus) {
+                turnStatus.textContent = statusText;
+            }
+        }
+
+        function clearReconnectTimer() {
+            if (connection.reconnectTimer) {
+                window.clearTimeout(connection.reconnectTimer);
+                connection.reconnectTimer = null;
+            }
+        }
+
+        function markActivity(reason) {
+            if (activity.expired) {
+                return;
+            }
+            activity.last = Date.now();
+            scheduleInactivityTimer();
+        }
+
+        function scheduleInactivityTimer() {
+            clearActivityTimer();
+            activity.timer = window.setTimeout(function () {
+                handleInactivityTimeout();
+            }, activity.timeoutMs);
+        }
+
+        function clearActivityTimer() {
+            if (activity.timer) {
+                window.clearTimeout(activity.timer);
+                activity.timer = null;
+            }
+        }
+
+        function handleInactivityTimeout() {
+            if (activity.expired) {
+                return;
+            }
+            activity.expired = true;
+            if (mode === 'network' && isSocketConnected()) {
+                sendTimeoutRequest();
+            } else {
+                applyTimeoutEvent({ message: 'Game closed due to inactivity.' });
+            }
+        }
+
+        function sendTimeoutRequest() {
+            if (!stompClient || !stompClient.connected) {
+                applyTimeoutEvent({ message: 'Game closed due to inactivity.' });
+                return;
+            }
+            var payload = {
+                gameKey: keys.channel,
+                playerKey: keys.viewer,
+                playerName: names.viewer
+            };
+            stompClient.send('/app/game.dice.timeout', {}, JSON.stringify(payload));
+        }
+
+        function setRestartButtonState(disabled) {
+            if (!restartButton) {
+                return;
+            }
+            if (disabled) {
+                restartButton.disabled = true;
+                restartButton.classList.add('button-link--disabled');
+            } else {
+                restartButton.disabled = false;
+                restartButton.classList.remove('button-link--disabled');
+            }
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+            if (mode !== 'network' || connection.forceLocal) {
+                return;
+            }
+            if (isSocketConnected()) {
+                return;
+            }
+            connection.attempts = 0;
+            clearReconnectTimer();
+            connectSocket({ retry: true });
+        }
+
+        function isSocketConnected() {
+            return stompClient && stompClient.connected;
+        }
+
+        function redirectToDashboard() {
+            window.location.href = '/dashboard';
+        }
+
+        function roleForKey(playerKey) {
+            if (!playerKey) {
+                return null;
+            }
+            if (playerKey === keys.viewer) {
+                return 'viewer';
+            }
+            if (playerKey === keys.opponent) {
+                return 'opponent';
+            }
+            return null;
+        }
+
+        function keyForRole(role) {
+            if (role === 'viewer') {
+                return keys.viewer;
+            }
+            if (role === 'opponent') {
+                return keys.opponent;
+            }
+            return null;
+        }
+
+        function rollDie() {
+            return Math.floor(Math.random() * 6) + 1;
+        }
+
+        function switchToLocalFallback(customMessage) {
+            if (mode === 'local') {
+                return;
+            }
+            connection.forceLocal = true;
+            connection.attempts = 0;
+            clearReconnectTimer();
+            mode = 'local';
+            if (subscription) {
+                subscription.unsubscribe();
+                subscription = null;
+            }
+            if (stompClient && typeof stompClient.disconnect === 'function') {
+                stompClient.disconnect();
+            }
+            stompClient = null;
+            resetInitialPhase({ reason: 'reset' });
+            setButtonState('opponent', true);
+            setButtonState('viewer', true);
+            var message = customMessage || 'Connection issue detected. Switched to local dice mode.';
+            updateInitialStatusMessage(message);
+            if (turnStatus) {
+                turnStatus.textContent = message;
+            }
+        }
+    })();
+/*]]>*/
+</script>
 </body>
 </html>

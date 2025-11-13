@@ -360,6 +360,12 @@ body {
     gap: 2rem;
 }
 
+.dice-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
 .dice-phase {
     flex: 1 1 280px;
     display: flex;

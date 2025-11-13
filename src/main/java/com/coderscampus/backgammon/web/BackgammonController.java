@@ -4,6 +4,7 @@ import com.coderscampus.backgammon.domain.Game;
 import com.coderscampus.backgammon.domain.User;
 import com.coderscampus.backgammon.service.OnlineUserRegistry;
 import com.coderscampus.backgammon.service.UserService;
+import com.coderscampus.backgammon.util.ChannelKeyUtil;
 import com.coderscampus.backgammon.web.dto.OnlineUserView;
 import com.coderscampus.backgammon.web.dto.PointView;
 import com.coderscampus.backgammon.repository.GameRepository;
@@ -115,8 +116,10 @@ public class BackgammonController {
         model.addAttribute("dice", List.of(0, 0));
         model.addAttribute("players", players);
         model.addAttribute("currentPlayer", null);
+        String gamePreviewKey = determineGameKey(gameId, viewerUser, opponentUser, viewerEmail, opponentDisplayName);
         model.addAttribute("previewMode", false);
-        model.addAttribute("gamePreviewKey", determineGameKey(gameId, viewerUser, opponentUser, viewerEmail, opponentDisplayName));
+        model.addAttribute("gamePreviewKey", gamePreviewKey);
+        model.addAttribute("gameChannelKey", ChannelKeyUtil.sanitize(gamePreviewKey));
         return "game";
     }
 
