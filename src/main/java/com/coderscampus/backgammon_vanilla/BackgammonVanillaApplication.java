@@ -1,4 +1,4 @@
-package com.example.backgammon_vanilla;
+package com.coderscampus.backgammon_vanilla;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
