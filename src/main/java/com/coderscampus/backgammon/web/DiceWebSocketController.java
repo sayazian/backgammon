@@ -3,6 +3,7 @@ package com.coderscampus.backgammon.web;
 import com.coderscampus.backgammon.service.GameDiceService;
 import com.coderscampus.backgammon.util.ChannelKeyUtil;
 import com.coderscampus.backgammon.web.dto.DiceEventMessage;
+import com.coderscampus.backgammon.web.dto.DiceExitRequest;
 import com.coderscampus.backgammon.web.dto.DiceResetRequest;
 import com.coderscampus.backgammon.web.dto.DiceRollRequest;
 import com.coderscampus.backgammon.web.dto.DiceStateRequest;
@@ -118,6 +119,28 @@ public class DiceWebSocketController {
         messagingTemplate.convertAndSend(
                 destinationFor(channelKey),
                 DiceEventMessage.timeout(channelKey, message));
+    }
+
+    @MessageMapping("/game.dice.exit")
+    public void handleExit(@Payload DiceExitRequest request) {
+        if (request == null || !StringUtils.hasText(request.gameKey())) {
+            return;
+        }
+        String channelKey = ChannelKeyUtil.sanitize(request.gameKey());
+        if (channelKey == null) {
+            return;
+        }
+        gameDiceService.reset(channelKey);
+        String name = request.playerName();
+        if (!StringUtils.hasText(name)) {
+            name = "A player";
+        } else {
+            name = name.trim();
+        }
+        String message = name + " has exited the game.";
+        messagingTemplate.convertAndSend(
+                destinationFor(channelKey),
+                DiceEventMessage.exit(channelKey, request.playerKey(), name, message));
     }
 
     private String destinationFor(String gameKey) {

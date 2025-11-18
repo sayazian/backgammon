@@ -115,6 +115,23 @@ public record DiceEventMessage(
                 System.currentTimeMillis());
     }
 
+    public static DiceEventMessage exit(String gameKey,
+                                        String playerKey,
+                                        String playerName,
+                                        String message) {
+        return new DiceEventMessage(
+                Objects.requireNonNullElse(gameKey, ""),
+                "EXIT",
+                playerKey,
+                playerName,
+                null,
+                null,
+                null,
+                null,
+                message,
+                System.currentTimeMillis());
+    }
+
     private static Map<String, Integer> copyOrNull(Map<String, Integer> rolls) {
         if (rolls == null) {
             return null;

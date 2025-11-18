@@ -12,7 +12,7 @@
         <h1 th:unless="${#strings.isEmpty(#strings.trim(viewerName))}">
             <span th:text="${viewerName}">Player</span>'s Game Board
         </h1>
-        <a class="button-link button-link--ghost" href="/dashboard">Back to Dashboard</a>
+        <a class="button-link button-link--ghost" href="/dashboard" data-role="back-dashboard">Back to Dashboard</a>
     </header>
 
     <section class="game-section">
@@ -90,6 +90,12 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<div class="exit-modal" data-role="exit-modal" aria-hidden="true">
+    <div class="exit-modal__dialog" role="alertdialog" aria-modal="true">
+        <p class="exit-modal__message" data-role="exit-message">Opponent exited the game.</p>
+        <button class="button-link" type="button" data-role="exit-confirm">OK</button>
+    </div>
+</div>
 <script th:inline="javascript">
 /*<![CDATA[*/
     (function () {
@@ -159,6 +165,10 @@
         var turnStatus = dicePanel.querySelector('[data-role="turn-status"]');
         var turnPlayers = Array.prototype.slice.call(document.querySelectorAll('.turn-player'));
         var restartButton = dicePanel.querySelector('[data-role="dice-reset"]');
+        var backButton = document.querySelector('[data-role="back-dashboard"]');
+        var exitModal = document.querySelector('[data-role="exit-modal"]');
+        var exitMessage = exitModal ? exitModal.querySelector('[data-role="exit-message"]') : null;
+        var exitConfirm = exitModal ? exitModal.querySelector('[data-role="exit-confirm"]') : null;
 
         setButtonState('viewer', true);
         setButtonState('opponent', mode === 'local');
@@ -166,6 +176,8 @@
         attachInitialHandlers();
         attachTurnHandler();
         attachRestartHandler();
+        attachBackButtonHandler();
+        attachExitConfirmHandler();
 
         if (mode === 'network') {
             connectSocket();
@@ -202,6 +214,26 @@
             }
             restartButton.addEventListener('click', function () {
                 handleRestartRequest();
+            });
+        }
+
+        function attachBackButtonHandler() {
+            if (!backButton) {
+                return;
+            }
+            backButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                handleExitNavigation();
+            });
+        }
+
+        function attachExitConfirmHandler() {
+            if (!exitConfirm) {
+                return;
+            }
+            exitConfirm.addEventListener('click', function () {
+                hideExitPrompt();
+                redirectToDashboard();
             });
         }
 
@@ -266,6 +298,18 @@
             }
             resetInitialPhase({ reason: 'reset' });
             updateInitialStatusMessage((nameForRole('viewer') || 'You') + ' restarted the dice.');
+        }
+
+        function handleExitNavigation() {
+            markActivity('exit-click');
+            activity.expired = true;
+            clearActivityTimer();
+            if (mode === 'network' && isSocketConnected()) {
+                sendExitRequest();
+                window.setTimeout(redirectToDashboard, 200);
+            } else {
+                redirectToDashboard();
+            }
         }
 
         function connectSocket(options) {
@@ -370,6 +414,9 @@
                     break;
                 case 'TIMEOUT':
                     applyTimeoutEvent(event);
+                    break;
+                case 'EXIT':
+                    applyExitEvent(event);
                     break;
                 default:
                     break;
@@ -755,6 +802,24 @@
             window.setTimeout(redirectToDashboard, 1500);
         }
 
+        function applyExitEvent(event) {
+            if (event && event.playerKey && event.playerKey === keys.viewer) {
+                return;
+            }
+            activity.expired = true;
+            clearActivityTimer();
+            var message = (event && event.message) ? event.message : 'The other player exited the game.';
+            setActiveTurn(null);
+            setButtonState('viewer', false);
+            setButtonState('opponent', false);
+            setRestartButtonState(true);
+            updateInitialStatusMessage(message);
+            if (turnStatus) {
+                turnStatus.textContent = message;
+            }
+            showExitPrompt(message);
+        }
+
         function broadcastTurnRoll(details) {
             if (mode !== 'network' || !stompClient || !stompClient.connected) {
                 return;
@@ -786,6 +851,18 @@
                 playerName: names.viewer
             };
             stompClient.send('/app/game.dice.reset', {}, JSON.stringify(payload));
+        }
+
+        function sendExitRequest() {
+            if (!stompClient || !stompClient.connected) {
+                return;
+            }
+            var payload = {
+                gameKey: keys.channel,
+                playerKey: keys.viewer,
+                playerName: names.viewer
+            };
+            stompClient.send('/app/game.dice.exit', {}, JSON.stringify(payload));
         }
 
         function handleConnectionFailure(reason) {
@@ -905,6 +982,30 @@
 
         function redirectToDashboard() {
             window.location.href = '/dashboard';
+        }
+
+        function showExitPrompt(message) {
+            if (!exitModal) {
+                window.alert(message);
+                redirectToDashboard();
+                return;
+            }
+            if (exitMessage) {
+                exitMessage.textContent = message;
+            }
+            exitModal.classList.add('is-visible');
+            exitModal.setAttribute('aria-hidden', 'false');
+            if (exitConfirm) {
+                exitConfirm.focus();
+            }
+        }
+
+        function hideExitPrompt() {
+            if (!exitModal) {
+                return;
+            }
+            exitModal.classList.remove('is-visible');
+            exitModal.setAttribute('aria-hidden', 'true');
         }
 
         function roleForKey(playerKey) {
