@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/style.css}" type="text/css">
+    <title>Backgammon Dashboard</title>
+</head>
+<body>
+    <div class="profile-page">
+        <header class="profile-header">
+            <h1>Profile</h1>
+            <a class="button-link button-link--ghost" href="/dashboard">Back to Dashboard</a>
+        </header>
+
+        <section class="profile-section">
+            <h2>Your Details</h2>
+            <form th:action="@{/profile}" th:object="${user}" method="post" class="profile-form" >
+                <div class="form-row">
+                    <label for="username">Display Name</label>
+                    <input id="username" type="text" th:field="*{name}" maxlength="100" required>
+                </div>
+                <div class="form-row">
+                    <label>Email</label>
+                    <span th:text="*{email}">user@example.com</span>
+                    <input type="hidden" th:field="*{email}">
+                </div>
+                <div class="form-row">
+                    <label>Joined</label>
+                    <span th:text="*{joinDate}">Jan 1, 2024</span>
+                    <input type="hidden" th:field="*{joinDate}">
+                </div>
+                <div class="form-actions">
+                    <button class="button-link" type="submit">Save Changes</button>
+                </div>
+            </form>
+
+        </section>
+
+        <section class="profile-section">
+            <h2>Game History</h2>
+            <div class="history-cards"  >
+                <div class="history-card">
+                    <span class="history-card__label">Games Played</span>
+                    <span class="history-card__value" th:text="${user.numberOfGames}">0</span>
+                </div>
+                <div class="history-card">
+                    <span class="history-card__label">Wins</span>
+                    <span class="history-card__value history-card__value--win" th:text="${user.wins}">0</span>
+                </div>
+                <div class="history-card">
+                    <span class="history-card__label">Losses</span>
+                    <span class="history-card__value history-card__value--loss" th:text="${user.losses}">0</span>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
