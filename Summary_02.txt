@@ -1,0 +1,14 @@
+• - Investigated invite delivery issues in backgammon-vanilla and compared with the working backgammon project.
+  - Added WebSocket messaging security config and invite service/controller wiring earlier; found the main issue was
+    destination/identity mismatch (using userId/null vs email).
+  - Switched invite routing to be email-based:
+      - InviteMessage now includes inviteeEmail/inviterEmail.
+      - InviteResponseMessage now includes inviterEmail.
+      - GameController builds email-aware invite/response payloads.
+      - InviteService publishes invites/responses to /topic/invites/{email}.
+      - dashboard.html subscribes to /topic/invites/{currentUserEmail} and handles both invites (confirm dialog → POST /
+        invite/respond) and responses (alerts) filtering by current userId.
+  - Added UserService.findById helper.
+  - Still need confirmation of end-to-end behavior after these changes; if issues persist, verify STOMP connection, CSRF
+    token, and that emails are non-null.
+

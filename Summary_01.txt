@@ -1,0 +1,18 @@
+  - Spring Boot 3.5.7 / Java 21 app with web, Thymeleaf, Spring Security (form + Google
+    OAuth2), and JPA; MySQL driver present.
+  - Domain: User entity (users table) with name, email, joinDate, numberOfGames, wins,
+    losses (getters/setters included); Game entity is bare (no accessors, all fields
+    package‑private).
+  - Persistence: UserRepository extends JpaRepository, finds by id/email; GameRepository
+    is empty.
+  - Service: UserService.updateUser looks up by email, creates new user with joinDate/
+    numberOfGames initialized, or updates name on existing; saves via repository.
+  - Web: GameController guards ///login//dashboard//profile; extracts name/email from
+    OAuth2 principal/UserDetails, calls userService.updateUser, and injects the user into
+    Thymeleaf views.
+  - Views: login.html, dashboard.html, profile.html with styles in static/css/style.css
+    (green gradient + Poppins). Profile form currently mis-binds (th:field="*{user.name}"
+    without th:object), so fields like email/joinDate don’t populate/post correctly.
+  - Config: SecurityConfig restricts access, sets login page and OAuth2 login.
+    application-dev.properties hardcodes local MySQL and Google OAuth credentials; prod
+    uses env vars. Tests: only contextLoads.

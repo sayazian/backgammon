@@ -614,3 +614,16 @@ body {
 .history-card__value--loss {
     color: #a0413e;
 }
+.section-2 {
+    display: flex;
+    flex-direction: row;
+    align-items: left;
+    justify-content: left;
+}
+
+.section-3 {
+    display: flex;
+    flex-direction: column;
+    margin-right: 20px;
+    justify-content: center;
+}

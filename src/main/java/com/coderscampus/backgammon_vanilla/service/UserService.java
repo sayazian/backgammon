@@ -28,6 +28,8 @@ public class UserService {
         } else {
             managedUser = userRepository.findByEmail(user.getEmail());
             managedUser.setName(user.getName());
+            managedUser.setOnline(user.isOnline());
+            managedUser.setFree(user.isFree());
         }
 
         return userRepository.save(managedUser);
@@ -45,6 +47,10 @@ public class UserService {
         return userOpt.orElseGet(() -> createNewUser(new User(name, email)));
     }
 
+    public User findById(Long userId) {
+        return userRepository.findById(userId).orElse(null);
+    }
+
     public void logUserIn(User user) {
         user.setOnline(true);
         user.setFree(true);
@@ -59,5 +65,13 @@ public class UserService {
         user.setOnline(false);
         user.setFree(false);
         saveUser(user);
+    }
+
+    public void markOnline(String name, String email, boolean online, boolean free) {
+        User user = Optional.ofNullable(userRepository.findByEmail(email))
+                .orElseGet(()-> createNewUser(new User(name, email)));
+        user.setOnline(online);
+        user.setFree(free);
+        updateUser(user);
     }
 }

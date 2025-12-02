@@ -1,9 +1,15 @@
 package com.coderscampus.backgammon_vanilla.web;
 
+import com.coderscampus.backgammon_vanilla.domain.Game;
+import com.coderscampus.backgammon_vanilla.domain.InviteMessage;
+import com.coderscampus.backgammon_vanilla.domain.InviteResponseMessage;
 import com.coderscampus.backgammon_vanilla.domain.User;
+import com.coderscampus.backgammon_vanilla.dto.InviteDecision;
+import com.coderscampus.backgammon_vanilla.service.InviteService;
 import com.coderscampus.backgammon_vanilla.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +21,8 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -22,9 +30,11 @@ import java.util.List;
 public class GameController {
 
     private final UserService userService;
+    private final InviteService inviteService;
 
-    public GameController(UserService userService) {
+    public GameController(UserService userService, InviteService inviteService) {
         this.userService = userService;
+        this.inviteService = inviteService;
     }
 
     @GetMapping({"/", "/login"})
@@ -50,6 +60,27 @@ public class GameController {
         return "dashboard";
     }
 
+    @GetMapping("/game/{gameId}")
+    public String game(User user1, User user2, Game game) {
+        return "redirect:/game/ + game.getGameId() ";
+    }
+
+    @PostMapping("/invite")
+    public String invite(@RequestParam Long inviteeId, Authentication auth) {
+        User inviter = userService.findUser(extractName(auth), extractEmail(auth));
+        User invitee = userService.findById(inviteeId);
+        if (invitee != null) {
+            InviteMessage invite = new InviteMessage(
+                    inviter.getUserId(),
+                    inviteeId,
+                    inviter.getName(),
+                    invitee.getEmail(),
+                    inviter.getEmail()
+            );
+            inviteService.sendInvite(invite);
+        }
+        return "redirect:/dashboard?invited";
+    }
 
     @GetMapping("/profile")
     public String profile(Authentication authentication, ModelMap model) {
@@ -78,7 +109,23 @@ public class GameController {
         return "redirect:/login?logout";
     }
 
-    private String extractName(Authentication authentication) {
+    @PostMapping("/invite/respond")
+    public ResponseEntity<Void> respond(@RequestBody InviteDecision decision, Authentication auth){
+        User invitee = userService.findUser(extractName(auth), extractEmail(auth));
+        User inviter = userService.findById(decision.inviterId());
+        if (inviter != null) {
+            InviteResponseMessage response = new InviteResponseMessage(
+                    invitee.getUserId(),
+                    invitee.getName(),
+                    inviter.getUserId(),
+                    decision.accepted(),
+                    inviter.getEmail()
+            );
+            inviteService.sendInviteResponse(response);
+        }
+        return ResponseEntity.ok().build();
+    }
+    public static String extractName(Authentication authentication) {
         if (authentication == null) {
             return null;
         }
@@ -103,11 +150,10 @@ public class GameController {
         if (principal instanceof UserDetails userDetails) {
             return userDetails.getUsername();
         }
-
         return authentication.getName();
     }
 
-    private String extractEmail(Authentication authentication) {
+    public static String extractEmail(Authentication authentication) {
         if (authentication == null) {
             return null;
         }
