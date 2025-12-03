@@ -27,12 +27,26 @@
                 <h2>Online Users</h2>
                 <th:block th:each="onlineUser : ${onlineUsers}"
                           th:if="${onlineUser.name != user.name}">
-                    <span th:text="${onlineUser.name}"></span>
-                    <form th:action="@{/invite}" method="post" style="display:inline">
-                        <input type="hidden" name="inviteeId" th:value="${onlineUser.userId}"/>
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <button type="submit">Invite to Game</button>
-                    </form>
+<!--                    <span th:text="${onlineUser.name}"></span>-->
+<!--                    <form th:action="@{/invite}" method="post" style="display:inline">-->
+<!--                        <input type="hidden" name="inviteeId" th:value="${onlineUser.userId}"/>-->
+<!--                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>-->
+<!--                        <button type="submit">Invite to Game</button>-->
+<!--                    </form>-->
+                                        <div class="section-2">
+                                            <div class="section-3" th:text="${onlineUser.name}"></div>
+                                            <th:block th:if="${onlineUser.free}">
+                                                <form method="post" style="display:inline" th:action="@{/invite}">
+                                                    <input th:name="inviteeId" th:value="${onlineUser.userId}" type="hidden"/>
+                                                    <button class="invite-button" type="submit">Invite To Game</button>
+                                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                                </form>
+                                            </th:block>
+                                            <th:block th:if="${!onlineUser.free}">
+                                                <a class="button-link">Busy</a>
+                                            </th:block>
+                                            <br/>
+                                        </div>
 <!--                    <div class="section-2">-->
 <!--                        <div class="section-3" th:text="${onlineUser.name}"></div>-->
 <!--                        <th:block th:if="${onlineUser.free}">-->
