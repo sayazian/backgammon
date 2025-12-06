@@ -5,6 +5,7 @@ import com.coderscampus.backgammon_vanilla.domain.InviteMessage;
 import com.coderscampus.backgammon_vanilla.domain.InviteResponseMessage;
 import com.coderscampus.backgammon_vanilla.domain.User;
 import com.coderscampus.backgammon_vanilla.dto.InviteDecision;
+import com.coderscampus.backgammon_vanilla.service.GameService;
 import com.coderscampus.backgammon_vanilla.service.InviteService;
 import com.coderscampus.backgammon_vanilla.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,10 +32,12 @@ public class GameController {
 
     private final UserService userService;
     private final InviteService inviteService;
+    private final GameService gameService;
 
-    public GameController(UserService userService, InviteService inviteService) {
+    public GameController(UserService userService, InviteService inviteService, GameService gameService) {
         this.userService = userService;
         this.inviteService = inviteService;
+        this.gameService = gameService;
     }
 
     @GetMapping({"/", "/login"})
@@ -100,30 +103,31 @@ public class GameController {
     @PostMapping("/logout")
     public String logout(HttpServletRequest request,
                          HttpServletResponse response, @ModelAttribute("user") User user) {
-//        userService.logUserOut(user);
-//
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        if (auth != null) {
-//            new SecurityContextLogoutHandler().logout(request, response, auth);
-//        }
         return "redirect:/login?logout";
     }
 
     @PostMapping("/invite/respond")
-    public ResponseEntity<Void> respond(@RequestBody InviteDecision decision, Authentication auth){
+    public ResponseEntity<InviteResponseMessage> respond(@RequestBody InviteDecision decision, Authentication auth){
+        Long gameId = null;
         User invitee = userService.findUser(extractName(auth), extractEmail(auth));
         User inviter = userService.findById(decision.inviterId());
-        if (inviter != null) {
-            InviteResponseMessage response = new InviteResponseMessage(
-                    invitee.getUserId(),
-                    invitee.getName(),
-                    inviter.getUserId(),
-                    decision.accepted(),
-                    inviter.getEmail()
-            );
-            inviteService.sendInviteResponse(response);
+        if (decision.accepted() && inviter != null && invitee != null) {
+            Game game = gameService.createNewGame(inviter.getUserId(), invitee.getUserId());
+            gameId = game.getGameId();
         }
-        return ResponseEntity.ok().build();
+        InviteResponseMessage response = new InviteResponseMessage(
+                invitee.getUserId(),
+                invitee.getName(),
+                inviter.getUserId(),
+                decision.accepted(),
+                inviter.getEmail(),
+                gameId
+        );
+        inviteService.sendInviteResponse(response);
+        if (invitee.getEmail() != null) {
+            inviteService.sendInviteResponseTo(invitee.getEmail(), response);
+        }
+        return ResponseEntity.ok(response);
     }
     public static String extractName(Authentication authentication) {
         if (authentication == null) {
@@ -178,7 +182,6 @@ public class GameController {
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken;
     }
-
 
     private User getUser(Authentication authentication) {
         User user = new User(extractName(authentication), extractEmail(authentication));

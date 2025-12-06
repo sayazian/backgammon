@@ -4,5 +4,6 @@ public record InviteResponseMessage(Long fromUserId,
                                     String fromName,
                                     Long toUserId,
                                     boolean accepted,
-                                    String inviterEmail) {
+                                    String inviterEmail,
+                                    Long gameId) {
 }

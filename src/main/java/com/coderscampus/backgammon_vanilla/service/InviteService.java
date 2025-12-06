@@ -24,4 +24,10 @@ public class InviteService {
             messagingTemplate.convertAndSend("/topic/invites/" + resp.inviterEmail(), resp);
         }
     }
+
+    public void sendInviteResponseTo(String email, InviteResponseMessage resp) {
+        if (resp != null && email != null) {
+            messagingTemplate.convertAndSend("/topic/invites/" + email, resp);
+        }
+    }
 }

@@ -12,3 +12,7 @@
   - Still need confirmation of end-to-end behavior after these changes; if issues persist, verify STOMP connection, CSRF
     token, and that emails are non-null.
 
+stompjs is a JavaScript client library for the STOMP messaging protocol. It lets browsers or Node apps speak STOMP
+  over WebSockets (or SockJS) to brokers/servers that support STOMP (e.g., RabbitMQ with STOMP plugin, ActiveMQ, Spring’s
+  WebSocket/STOMP support). It gives you a simple API to connect, subscribe to destinations, and send messages, handling
+  frames, heartbeats, and reconnection logic.

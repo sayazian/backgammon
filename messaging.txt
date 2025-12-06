@@ -1,0 +1,45 @@
+Messaging between inviter and invitee (WebSocket + HTTP)
+
+1) WebSocket setup
+- src/main/java/com/coderscampus/backgammon_vanilla/config/WebSocketConfig.java
+  - STOMP endpoint: /ws (SockJS enabled)
+  - Broker prefixes: /topic, /queue; app prefix: /app; user prefix: /user
+
+2) Message payloads
+- src/main/java/com/coderscampus/backgammon_vanilla/domain/InviteMessage.java
+  - record InviteMessage(Long fromUserId, Long toUserId, String fromName, String inviteeEmail, String inviterEmail)
+- src/main/java/com/coderscampus/backgammon_vanilla/domain/InviteResponseMessage.java
+  - record InviteResponseMessage(Long fromUserId, String fromName, Long toUserId, boolean accepted, String inviterEmail, Long gameId)
+
+3) Broker publishing
+- src/main/java/com/coderscampus/backgammon_vanilla/service/InviteService.java
+  - sendInvite(InviteMessage msg) -> /topic/invites/{inviteeEmail}
+  - sendInviteResponse(InviteResponseMessage resp) -> /topic/invites/{inviterEmail}
+  - sendInviteResponseTo(String email, InviteResponseMessage resp) -> /topic/invites/{email} (used for invitee)
+
+4) HTTP endpoints wiring messages
+- src/main/java/com/coderscampus/backgammon_vanilla/web/GameController.java
+  - POST /invite
+    - Finds inviter (auth) and invitee (by inviteeId)
+    - Builds InviteMessage(inviterId, inviteeId, inviterName, inviteeEmail, inviterEmail)
+    - inviteService.sendInvite(...)
+    - Redirects back to /dashboard
+  - POST /invite/respond
+    - Body: InviteDecision(inviterId, accepted)
+    - Resolves invitee (auth) and inviter; if accepted, creates Game via gameService.createNewGame and captures gameId
+    - Builds InviteResponseMessage(inviteeId, inviteeName, inviterId, accepted, inviterEmail, gameId)
+    - Publishes to inviter via sendInviteResponse(...) and to invitee via sendInviteResponseTo(inviteeEmail, ...)
+    - Returns the InviteResponseMessage JSON to the caller
+
+5) Frontend message handling
+- src/main/resources/templates/dashboard.html
+  - <body> carries data-user-email, data-user-id, data-csrf-token for JS
+  - Includes SockJS + stomp.js and /js/dashboard.js
+- src/main/resources/static/js/dashboard.js
+  - Reads userEmail/userId/csrfToken from body.dataset
+  - Creates SockJS('/ws') + Stomp.over(socket); subscribes to /topic/invites/{currentUserEmail}
+  - On InviteMessage: showInviteModal(invite)
+  - On InviteResponseMessage:
+      - If accepted and gameId present for current user (toUserId or fromUserId), redirects to /game/{gameId}
+      - Otherwise shows response modal message
+  - respondToInvite(inviterId, accepted): POST /invite/respond with JSON body {inviterId, accepted}, CSRF header; on success with gameId redirects to /game/{gameId}
