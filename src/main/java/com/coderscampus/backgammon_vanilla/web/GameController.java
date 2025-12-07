@@ -78,6 +78,10 @@ public class GameController {
         return "redirect:/login?logout";
     }
 
+    @GetMapping("/invite")
+    public String invite(User invitee, Authentication authentication) {
+
+    }
     private String extractName(Authentication authentication) {
         if (authentication == null) {
             return null;
@@ -132,7 +136,6 @@ public class GameController {
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken;
     }
-
 
     private User getUser(Authentication authentication) {
         User user = new User(extractName(authentication), extractEmail(authentication));
