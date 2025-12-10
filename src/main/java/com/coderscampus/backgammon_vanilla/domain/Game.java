@@ -15,6 +15,13 @@ public class Game {
     int user2Score;
     boolean starter;
 
+    public Game() {
+        new Game(null, null);
+    }
+    public Game(Long user1Id, Long user2Id) {
+        this.user1Id = user1Id;
+        this.user2Id = user2Id;
+    }
     public Long getGameId() {
         return gameId;
     }

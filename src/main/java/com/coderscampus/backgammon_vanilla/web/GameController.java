@@ -1,30 +1,41 @@
 package com.coderscampus.backgammon_vanilla.web;
 
+import com.coderscampus.backgammon_vanilla.domain.Game;
+import com.coderscampus.backgammon_vanilla.domain.Invite;
 import com.coderscampus.backgammon_vanilla.domain.User;
+import com.coderscampus.backgammon_vanilla.service.GameService;
+import com.coderscampus.backgammon_vanilla.service.InviteService;
 import com.coderscampus.backgammon_vanilla.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class GameController {
 
     private final UserService userService;
+    private final InviteService inviteService;
+    private final GameService gameService;
 
-    public GameController(UserService userService) {
+    public GameController(UserService userService, InviteService inviteService, GameService gameService) {
         this.userService = userService;
+        this.inviteService = inviteService;
+        this.gameService = gameService;
     }
 
     @GetMapping({"/", "/login"})
@@ -78,9 +89,34 @@ public class GameController {
         return "redirect:/login?logout";
     }
 
-    @GetMapping("/invite")
-    public String invite(User invitee, Authentication authentication) {
+    @PostMapping("/invite")
+    public String invite(Long inviteeId, Authentication authentication, RedirectAttributes redirectAttributes) {
+        User inviter = userService.findUser(extractName(authentication), extractEmail(authentication));
+        User invitee = userService.findById(inviteeId);
+        Invite invite = inviteService.createInvite(inviter.getUserId(), invitee.getUserId());
+        redirectAttributes.addFlashAttribute("inviteeName", invitee.getName());
+        return "redirect:/dashboard";
+    }
 
+    @GetMapping("/invited/{userId}/getInvites")
+    @ResponseBody
+    public List<Invite> getInvites(@PathVariable("userId") Long userId) {
+        return inviteService.getInvites(userId);
+    }
+
+    @PostMapping ("/createAGame")
+    @ResponseBody
+    public Map<String, Object> createAGame (@RequestBody Map<String, String> body) {
+        Game game = gameService.createGame(Long.valueOf(body.get("inviterId")), Long.valueOf(body.get("inviteeId")));
+        String url = "/games/" + game.getGameId();
+        return Map.of("gameId", game.getGameId(), "url",url);
+    }
+
+    @GetMapping("/games/{gameId}")
+    public String showGame(@PathVariable("gameId") Long gameId, ModelMap modelMap) {
+        Game game = gameService.findById(gameId);
+        modelMap.put("game", game);
+        return("/game");
     }
     private String extractName(Authentication authentication) {
         if (authentication == null) {

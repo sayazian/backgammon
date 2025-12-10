@@ -60,4 +60,8 @@ public class UserService {
         user.setFree(false);
         saveUser(user);
     }
+
+    public User findById(Long inviteeId) {
+        return userRepository.findById(inviteeId).orElse(null);
+    }
 }

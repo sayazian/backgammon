@@ -5,7 +5,7 @@
     <link rel="stylesheet" th:href="@{/css/style.css}" type="text/css">
     <title>Backgammon Dashboard</title>
 </head>
-<body>
+<body th:attr="data-user-id=${user.userId}">
     <div class="dashboard-wrapper">
         <header class="dashboard-header">
             <h1>Welcome <span th:text="${user.name}">Player</span>,</h1>
@@ -32,6 +32,7 @@
                             <form method="post" style="display:inline" th:action="@{/invite}">
                                 <input th:name="inviteeId" th:value="${onlineUser.userId}" type="hidden"/>
                                 <button class="invite-button" type="submit">Invite To Game</button>
+                                <input type="hidden" th:name="${inviteeName}" th:value="${onlineUser.userId}"/>
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                             </form>
                         </th:block>
@@ -47,5 +48,7 @@
     <form id="logoutForm" th:action="@{/logout}" method="post" style="display:none">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
     </form>
+    <div id="inviteDiv" type="hidden" th:if="${inviteeName != null}" th:name="${inviteeName}"></div>
+    <script src = "js/dashboard.js" ></script>
 </body>
 </html>
