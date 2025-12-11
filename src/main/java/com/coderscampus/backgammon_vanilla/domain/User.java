@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @Table(name = "users")
 public class User {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    int userId;
+    Long userId;
     String name;
     String email;
     LocalDate joinDate;
@@ -33,11 +33,11 @@ public class User {
         this.email = email;
         this.joinDate = LocalDate.now();
     }
-    public int getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
