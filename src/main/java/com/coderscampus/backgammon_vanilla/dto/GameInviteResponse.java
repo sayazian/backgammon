@@ -1,8 +1,10 @@
 package com.coderscampus.backgammon_vanilla.dto;
 
 public class GameInviteResponse {
-    private Long fromUserId; //invitee
-    private Long toUserId; //inviter
+    private Long fromUserId;
+    private String fromUserName;//invitee
+    private Long toUserId;
+    private String toUserName;//inviter
     private Long gameId;
     private boolean accepted;
 
@@ -14,12 +16,28 @@ public class GameInviteResponse {
         this.fromUserId = fromUserId;
     }
 
+    public String getFromUserName() {
+        return fromUserName;
+    }
+
+    public void setFromUserName(String fromUserName) {
+        this.fromUserName = fromUserName;
+    }
+
     public Long getToUserId() {
         return toUserId;
     }
 
     public void setToUserId(Long toUserId) {
         this.toUserId = toUserId;
+    }
+
+    public String getToUserName() {
+        return toUserName;
+    }
+
+    public void setToUserName(String toUserName) {
+        this.toUserName = toUserName;
     }
 
     public Long getGameId() {

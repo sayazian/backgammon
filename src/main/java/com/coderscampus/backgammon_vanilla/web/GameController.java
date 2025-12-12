@@ -1,7 +1,9 @@
 package com.coderscampus.backgammon_vanilla.web;
 
+import com.coderscampus.backgammon_vanilla.domain.Game;
 import com.coderscampus.backgammon_vanilla.domain.User;
 import com.coderscampus.backgammon_vanilla.service.AuthUserHelper;
+import com.coderscampus.backgammon_vanilla.service.GameService;
 import com.coderscampus.backgammon_vanilla.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
@@ -20,11 +23,13 @@ public class GameController {
 
     private final UserService userService;
     private final AuthUserHelper authUserHelper;
+    private final GameService gameService;
 
     public GameController(UserService userService,
-                          AuthUserHelper authUserHelper) {
+                          AuthUserHelper authUserHelper, GameService gameService) {
         this.userService = userService;
         this.authUserHelper = authUserHelper;
+        this.gameService = gameService;
     }
 
     @GetMapping({"/", "/login"})
@@ -78,6 +83,11 @@ public class GameController {
         return "redirect:/login?logout";
     }
 
+    @GetMapping("/games/{gameId}")
+    public String game(Authentication authentication, ModelMap model, @PathVariable int gameId) {
+        Game game = gameService.findById((long) gameId);
+        return "game";
+    }
 
     private boolean isAnonymous(Authentication authentication) {
         return authentication == null

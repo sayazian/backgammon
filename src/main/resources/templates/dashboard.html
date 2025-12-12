@@ -33,7 +33,7 @@
                             <form method="post"
                                   style="display:inline"
                                   class="invite-form"
-                                  th:attr="data-invitee-id=${onlineUser.userId}">
+                                  th:attr="data-invitee-id=${onlineUser.userId}, data-invitee-name=${onlineUser.name}">
                                 <input th:name="inviteeId" th:value="${onlineUser.userId}" type="hidden"/>
                                 <button class="invite-button" type="submit">Invite To Game</button>
                             </form>
