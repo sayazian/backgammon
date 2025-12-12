@@ -1,15 +1,12 @@
 package com.coderscampus.backgammon_vanilla.web;
 
 import com.coderscampus.backgammon_vanilla.domain.User;
+import com.coderscampus.backgammon_vanilla.service.AuthUserHelper;
 import com.coderscampus.backgammon_vanilla.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +19,12 @@ import java.util.List;
 public class GameController {
 
     private final UserService userService;
+    private final AuthUserHelper authUserHelper;
 
-    public GameController(UserService userService) {
+    public GameController(UserService userService,
+                          AuthUserHelper authUserHelper) {
         this.userService = userService;
+        this.authUserHelper = authUserHelper;
     }
 
     @GetMapping({"/", "/login"})
@@ -40,8 +40,8 @@ public class GameController {
         if (isAnonymous(authentication)) {
             return "redirect:/";
         }
-        String name = extractName(authentication);
-        String email = extractEmail(authentication);
+        String name = authUserHelper.extractName(authentication);
+        String email = authUserHelper.extractEmail(authentication);
         User user = userService.findUser(name, email);
         userService.logUserIn(user);
         List<User> onlineUsers = userService.extractOnlineUsers();
@@ -53,8 +53,8 @@ public class GameController {
 
     @GetMapping("/profile")
     public String profile(Authentication authentication, ModelMap model) {
-        String name = extractName(authentication);
-        String email = extractEmail(authentication);
+        String name = authUserHelper.extractName(authentication);
+        String email = authUserHelper.extractEmail(authentication);
         User user = userService.findUser(name, email);
         model.put("user", user);
         return "profile";
@@ -78,54 +78,6 @@ public class GameController {
         return "redirect:/login?logout";
     }
 
-    private String extractName(Authentication authentication) {
-        if (authentication == null) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof OAuth2User oauth2User) {
-            String name = oauth2User.getAttribute("name");
-            if (name == null) {
-                name = oauth2User.getAttribute("given_name");
-            }
-            if (name == null) {
-                name = oauth2User.getAttribute("preferred_username");
-            }
-            if (name == null) {
-                name = oauth2User.getAttribute("email");
-            }
-            if (name != null && !name.isBlank()) {
-                return name;
-            }
-        }
-
-        if (principal instanceof UserDetails userDetails) {
-            return userDetails.getUsername();
-        }
-
-        return authentication.getName();
-    }
-
-    private String extractEmail(Authentication authentication) {
-        if (authentication == null) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof OAuth2User oauth2User) {
-            String email = oauth2User.getAttribute("email");
-            if (email != null && !email.isBlank()) {
-                return email;
-            }
-        }
-
-        if (principal instanceof UserDetails userDetails) {
-            return userDetails.getUsername();
-        }
-
-        return authentication.getName();
-    }
 
     private boolean isAnonymous(Authentication authentication) {
         return authentication == null
@@ -135,7 +87,7 @@ public class GameController {
 
 
     private User getUser(Authentication authentication) {
-        User user = new User(extractName(authentication), extractEmail(authentication));
+        User user = new User(authUserHelper.extractName(authentication), authUserHelper.extractEmail(authentication));
         user = userService.updateUser(user);
         return user;
     }

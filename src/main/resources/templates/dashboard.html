@@ -5,7 +5,7 @@
     <link rel="stylesheet" th:href="@{/css/style.css}" type="text/css">
     <title>Backgammon Dashboard</title>
 </head>
-<body>
+<body th:attr="data-user-id=${user.userId}">
     <div class="dashboard-wrapper">
         <header class="dashboard-header">
             <h1>Welcome <span th:text="${user.name}">Player</span>,</h1>
@@ -30,11 +30,12 @@
                     <div class="section-2">
                         <div class="section-3" th:text="${onlineUser.name}"></div>
                         <th:block th:if="${onlineUser.free}">
-                            <form method="post" style="display:inline" id="inviteForm">
+                            <form method="post"
+                                  style="display:inline"
+                                  class="invite-form"
+                                  th:attr="data-invitee-id=${onlineUser.userId}">
                                 <input th:name="inviteeId" th:value="${onlineUser.userId}" type="hidden"/>
                                 <button class="invite-button" type="submit">Invite To Game</button>
-                                <input th:name="${inviteeName}" th:value="${onlineUser.userId}" type="hidden"/>
-                                <input th:name="${_csrf.parameterName}" th:value="${_csrf.token}" type="hidden"/>
                             </form>
                         </th:block>
                         <th:block th:if="${!onlineUser.free}">
@@ -51,7 +52,8 @@
     </form>
 
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2/dist/stomp.min.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <script th:src="@{/js/dashboard.js}"></script>
 </body>
 </html>
