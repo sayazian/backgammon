@@ -37,6 +37,8 @@ public class GameInviteController {
         }
         invite.setFromUserId(user.getUserId());
         invite.setFromUserName(user.getName());
+        Game game = gameService.createGame(user.getUserId(), invite.getToUserId());
+        invite.setGameId(game.getGameId());
 
         messagingTemplate.convertAndSend(
                 "/topic/invitations/" + invite.getToUserId(),
@@ -52,8 +54,6 @@ public class GameInviteController {
         }
         response.setFromUserId(user.getUserId());
         response.setFromUserName(user.getName());
-        Game game = gameService.createGame(response.getToUserId(), user.getUserId());
-        response.setGameId(game.getGameId());
 
         messagingTemplate.convertAndSend(
                 "/topic/invitations/responses/" + response.getToUserId(),

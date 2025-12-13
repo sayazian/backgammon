@@ -16,7 +16,7 @@
             <h2>Your Details</h2>
             <form th:action="@{/profile}" th:object="${user}" method="post" class="profile-form" >
                 <div class="form-row">
-                    <label for="username">Display Name</label>
+                    <label for="username">Name</label>
                     <input id="username" type="text" th:field="*{name}" maxlength="100" required>
                 </div>
                 <div class="form-row">
@@ -24,7 +24,7 @@
                     <span th:text="*{email}">user@example.com</span>
                     <input type="hidden" th:field="*{email}">
                 </div>
-                <div class="form-row">
+                 <div class="form-row">
                     <label>Joined</label>
                     <span th:text="*{joinDate}">Jan 1, 2024</span>
                     <input type="hidden" th:field="*{joinDate}">

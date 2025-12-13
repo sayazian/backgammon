@@ -89,6 +89,13 @@ public class GameController {
         return "game";
     }
 
+    @GetMapping("/game")
+    public String game(Authentication authentication, ModelMap model) {
+        Game game = gameService.findById((long) 12);
+        model.put("game", game);
+        return "game";
+    }
+
     private boolean isAnonymous(Authentication authentication) {
         return authentication == null
                 || !authentication.isAuthenticated()

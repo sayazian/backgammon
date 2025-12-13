@@ -1,20 +1,31 @@
 let stompClient = null;
-const form = document.getElementById('inviteForm');
-const inviteeUserId = document.getElementById('inviteeId');
+let currentUserId = null;
 
 function connectStomp() {
-    const socket = new SockJS('ws');
-    stompClient = Stomp.over(socket);
+    currentUserId = document.body.getAttribute('data-user-id');
+    if (!currentUserId) {
+        console.error('Current user id not found on page.');
+        return;
+    }
 
-    stompClient.connect({}, frame =>{
+    const socket = new SockJS('/ws');
+    const StompLib = window.Stomp || (window.StompJs && window.StompJs.Stomp);
+    if (!StompLib) {
+        console.error('STOMP library not loaded');
+        return;
+    }
+    stompClient = StompLib.over(socket);
+
+    stompClient.connect({}, frame => {
         console.log('Connected: ' + frame);
 
-        stompClient.subscribe('/user/queue/invitations', message => {
+        // Subscribe to per-user topics keyed by userId
+        stompClient.subscribe(`/topic/invitations/${currentUserId}`, message => {
             const invite = JSON.parse(message.body);
-            onInvitedReceived(invite);
+            onInviteReceived(invite);
         });
 
-        stompClient.subscribe('/user/queue/invitations/responses', message => {
+        stompClient.subscribe(`/topic/invitations/responses/${currentUserId}`, message => {
             const response = JSON.parse(message.body);
             onInviteResponse(response);
         });
@@ -23,45 +34,62 @@ function connectStomp() {
     });
 }
 
-function inviteUser(inviteeId) {
-    const message = promopt(`Message for ${inviteeId}`, `Want to play a game?`);
+function sendInvite(toUserId, toUserName) {
+    if (!stompClient || !stompClient.connected) {
+        console.warn('STOMP not connected yet.');
+        return;
+    }
+
+    const message = prompt(`Message for user ${toUserName}`, 'Want to play a game?') || '';
     const payload = {
-        toUsername: inviteeId,
+        toUserId: Number(toUserId),
         message: message
     };
     stompClient.send('/app/invite', {}, JSON.stringify(payload));
 }
 
 function onInviteReceived(invite) {
-    const text = `${invite.fromUsername} invited you to a game.\n\nMessage: ${invite.message || ''}`;
-    const accepted = confirm(text + "\n\nClick OK to accept, Cancel to decline.");
+    const text = `User ${invite.fromUserName} invited you to a game.\n\nMessage: ${invite.message || ''}`;
+    const accepted = confirm(text + '\n\nClick OK to accept, Cancel to decline.');
 
     const response = {
-        toUsername: invite.fromUsername,
+        toUserId: invite.fromUserId,
         gameId: invite.gameId || null,
         accepted: accepted
     };
 
     stompClient.send('/app/invite/response', {}, JSON.stringify(response));
 
-    if(accepted) {
-        // Option 1: server generates gameId and sends in a follow-up message
-        // Option 2: redirect later when you receive a "game-started" event
+    if (accepted && response.gameId) {
+        window.location.href = `/games/${response.gameId}`;
     }
 }
 
 function onInviteResponse(response) {
-    if(response.accepted) {
-        alert(`${response.fromUsername} accepted your invite!`);
-
-        //If response.gameId is set
-        if(response.gameId) {
-            window.location.href = `/game/${response.gameId}`;
+    if (response.accepted) {
+        alert(`User ${response.fromUserName || response.fromUserId} accepted your invite!`);
+        // Only redirect if your server really has a game page
+        if (response.gameId) {
+            window.location.href = `/games/${response.gameId}`;
+            console.log('Game accepted, gameId:', response.gameId);
         }
     } else {
-        alert(`${response.fromUsername} declined your invite.`)
+        alert(`User ${response.fromUserName || response.fromUserId} declined your invite.`);
     }
 }
 
-window.addEventListener('DOMContentLoaded', connectStomp);
-from.addEventListener('submit', inviteUser(inviteeUserId));
+function wireInviteForms() {
+    document.querySelectorAll('.invite-form').forEach(form => {
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            const toUserId = form.dataset.inviteeId;
+            const toUserName = form.dataset.inviteeName;
+            sendInvite(toUserId, toUserName);
+        });
+    });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    connectStomp();
+    wireInviteForms();
+});

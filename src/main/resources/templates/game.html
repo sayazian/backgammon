@@ -1,10 +1,40 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Game</title>
+    <title>Backgammon</title>
+    <link rel="stylesheet" th:href="@{/css/game.css}" type="text/css">
+
 </head>
 <body>
+    <div class="table">
+        <div class="outer-rail">
+            <div class="outer-rect" data-outer="left-top"></div>
+            <div class="outer-rect" data-outer="left-bottom"></div>
+        </div>
+        <div class="board" id="board">
+            <div class="half" id="half-left"></div>
+            <div class="divider"></div>
+            <div class="half" id="half-right"></div>
+        </div>
+        <div class="sidebar">
+            <div class="panel players">
+                <div>Player 1: <span id="p1">${game.user1}</span></div>
+                <div>Player 2: <span id="p2">Bob</span></div>
+                <div class="turn" id="turn">Turn: Alice</div>
+            </div>
+            <div class="panel">
+                <div style="text-align:center; margin-bottom:6px;">Dice (click)</div>
+                <div class="dice">
+                    <div class="die" id="die1"></div>
+                    <div class="die" id="die2"></div>
+                </div>
+                <button class="btn" id="roll">Roll Dice</button>
+            </div>
+        </div>
+    </div>
 
+    <script th:src="@{/js/game.js}"></script>
 </body>
 </html>
