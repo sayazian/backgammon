@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="188" viewBox="0 0 50 188">
+  <defs>
+    <linearGradient id="blackChecker" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#252018"/>
+      <stop offset="40%" style="stop-color:#1a1510"/>
+      <stop offset="100%" style="stop-color:#0d0a08"/>
+    </linearGradient>
+  </defs>
+  <circle cx="25" cy="163" r="22" fill="url(#blackChecker)" stroke="#000" stroke-width="2"/>
+  <circle cx="25" cy="117" r="22" fill="url(#blackChecker)" stroke="#000" stroke-width="2"/>
+  <circle cx="25" cy="71" r="22" fill="url(#blackChecker)" stroke="#000" stroke-width="2"/>
+  <circle cx="25" cy="25" r="22" fill="url(#blackChecker)" stroke="#000" stroke-width="2"/>
+</svg>

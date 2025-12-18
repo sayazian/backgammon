@@ -1,5 +1,6 @@
 package com.coderscampus.backgammon_vanilla.web;
 
+import com.coderscampus.backgammon_vanilla.domain.BoardStatus;
 import com.coderscampus.backgammon_vanilla.domain.Game;
 import com.coderscampus.backgammon_vanilla.domain.User;
 import com.coderscampus.backgammon_vanilla.service.AuthUserHelper;
@@ -92,7 +93,9 @@ public class GameController {
     @GetMapping("/game")
     public String game(Authentication authentication, ModelMap model) {
         Game game = gameService.findById((long) 12);
+        BoardStatus boardStatus = new BoardStatus();
         model.put("game", game);
+        model.put("boardStatus", boardStatus);
         return "game";
     }
 

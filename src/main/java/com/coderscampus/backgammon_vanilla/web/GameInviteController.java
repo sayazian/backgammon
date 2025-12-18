@@ -37,7 +37,7 @@ public class GameInviteController {
         }
         invite.setFromUserId(user.getUserId());
         invite.setFromUserName(user.getName());
-        Game game = gameService.createGame(user.getUserId(), invite.getToUserId());
+        Game game = gameService.createGame(invite.getFromUserId(), invite.getToUserId(), invite.getFromUserName(), invite.getToUserName() );
         invite.setGameId(game.getGameId());
 
         messagingTemplate.convertAndSend(

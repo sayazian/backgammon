@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="280" viewBox="0 0 50 280">
+  <defs>
+    <linearGradient id="whiteChecker" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fffef8"/>
+      <stop offset="40%" style="stop-color:#f5f0e0"/>
+      <stop offset="100%" style="stop-color:#e8e0d0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="25" cy="255" r="22" fill="url(#whiteChecker)" stroke="#50382a" stroke-width="2"/>
+  <circle cx="25" cy="209" r="22" fill="url(#whiteChecker)" stroke="#50382a" stroke-width="2"/>
+  <circle cx="25" cy="163" r="22" fill="url(#whiteChecker)" stroke="#50382a" stroke-width="2"/>
+  <circle cx="25" cy="117" r="22" fill="url(#whiteChecker)" stroke="#50382a" stroke-width="2"/>
+  <circle cx="25" cy="71" r="22" fill="url(#whiteChecker)" stroke="#50382a" stroke-width="2"/>
+  <circle cx="25" cy="25" r="22" fill="url(#whiteChecker)" stroke="#50382a" stroke-width="2"/>
+  <text x="25" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#50382a">10</text>
+</svg>

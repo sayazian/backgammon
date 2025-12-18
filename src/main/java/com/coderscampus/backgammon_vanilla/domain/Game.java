@@ -7,10 +7,13 @@ import jakarta.persistence.Id;
 
 @Entity
 public class Game {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long gameId;
     Long user1Id;
     Long user2Id;
+    String user1Name;
+    String user2Name;
     int user1Score;
     int user2Score;
     boolean starter;
@@ -27,6 +30,7 @@ public class Game {
         return user1Id;
     }
 
+
     public void setUser1Id(Long user1Id) {
         this.user1Id = user1Id;
     }
@@ -37,6 +41,23 @@ public class Game {
 
     public void setUser2Id(Long user2Id) {
         this.user2Id = user2Id;
+    }
+
+    public String getUser1Name() {
+        return user1Name;
+    }
+
+    public void setUser1Name(String user1Name) {
+        this.user1Name = user1Name;
+    }
+
+
+    public String getUser2Name() {
+        return user2Name;
+    }
+
+    public void setUser2Name(String user2Name) {
+        this.user2Name = user2Name;
     }
 
     public int getUser1Score() {
