@@ -39,8 +39,6 @@ function normalizeBoardStatus(status) {
     };
 }
 
-
-
 function renderDie(el, val) {
     el.innerHTML = '';
     (pipsByValue[val] || []).forEach(cls => {
@@ -107,6 +105,11 @@ function handlePointClick(pointNum) {
         return;
     }
 
+    if (selectedPoint && boardState.hits[currentTurn] === 0 && targetPointNum === 0) {
+        tryBearOff(selectedPoint);
+        return;
+    }
+
     // If there are hits for the current player, they must re-enter first
     if (boardState.hits[currentTurn] > 0 && !selectedFromHit) {
         // If user clicks a point while having hits, treat it as an attempt to re-enter
@@ -145,8 +148,8 @@ function handleHitClick(color) {
 }
 
 function isEntryPoint(color, pointNum) {
-    if (color === 'white') return pointNum >= 1 && pointNum <= 6;
-    if (color === 'black') return pointNum >= 19 && pointNum <= 24;
+    if (color === 'black') return pointNum >= 1 && pointNum <= 6;
+    if (color === 'white') return pointNum >= 19 && pointNum <= 24;
     return false;
 }
 
@@ -215,6 +218,20 @@ function tryEnterFromHit(toPointNum) {
     console.log('Entered from hit to point', toPointNum);
 }
 
+function tryBearOff(fromPointNum) {
+    const from = boardState.points.find(p => p.position === Number(fromPointNum));
+    if (!from || from.number <= 0 || from.color !== currentTurn) {
+        console.log('Bear off blocked: no checker to bear off from', fromPointNum);
+        return;
+    }
+    from.number -= 1;
+    if (from.number === 0) from.color = null;
+    boardState.outs[currentTurn] = (boardState.outs[currentTurn] || 0) + 1;
+    renderBoardFromStatus(boardState);
+    clearSelection();
+    console.log('Borne off from point', fromPointNum);
+}
+
 function buildBoard() {
     const halves = [document.getElementById('half-left'), document.getElementById('half-right')];
 
@@ -245,8 +262,11 @@ function buildBoard() {
     });
 
     document.querySelectorAll('.outer-rect').forEach(rect => {
+        const outColor = rect.querySelector('[data-out]')?.dataset.out;
         rect.onclick = () => {
-            console.log('Clicked outer rail', rect.dataset.outer);
+            if (selectedPoint && outColor === currentTurn) {
+                tryBearOff(selectedPoint);
+            }
         };
     });
 
@@ -264,6 +284,7 @@ function renderStack(selector, color, count) {
     for (let i = 0; i < count; i++) {
         const checker = document.createElement('div');
         checker.className = `checker ${color}`;
+        checker.style.setProperty('--stack-index', i);
         el.appendChild(checker);
     }
 }

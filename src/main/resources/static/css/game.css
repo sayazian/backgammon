@@ -173,6 +173,37 @@ body {
     pointer-events: none;
 }
 
+.stack[data-out] {
+    flex-direction: column-reverse;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0;
+    position: relative;
+}
+
+.stack[data-out] .checker {
+    width: 46px;
+    height: 12px;
+    border-radius: 6px;
+    margin-top: 0;
+    transform: translateY(calc(-6px * var(--stack-index, 0)));
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.stack[data-out] .checker.white {
+    background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(230,230,230,0.9));
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.stack[data-out] .checker.black {
+    background: linear-gradient(90deg, rgba(30,30,30,0.95), rgba(60,60,60,0.9));
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.outer-rect .stack[data-out] .checker:first-child {
+    margin-top: 0;
+}
+
 .stack .checker {
     width: 36px;
     height: 36px;

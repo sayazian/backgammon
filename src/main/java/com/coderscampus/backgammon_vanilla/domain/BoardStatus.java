@@ -56,7 +56,7 @@ public class BoardStatus {
     private List<Point> initializePoints() {
         List<Point> points = new ArrayList<>(24);
         for (int i = 0; i < 24; i++) {
-            points.add(new Point(i, null, 0));
+            points.add(new Point(i+1, null, 0));
         }
         points.set(24-1,new Point(24, "white", 2));
         points.set(13-1,new Point(13, "white", 5));
