@@ -87,6 +87,9 @@ public class GameController {
     @GetMapping("/games/{gameId}")
     public String game(Authentication authentication, ModelMap model, @PathVariable int gameId) {
         Game game = gameService.findById((long) gameId);
+        BoardStatus boardStatus = new BoardStatus();
+        model.put("game", game);
+        model.put("boardStatus", boardStatus);
         return "game";
     }
 
