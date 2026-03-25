@@ -1,6 +1,6 @@
-package com.coderscampus.backgammon_vanilla.repository;
+package com.coderscampus.backgammon.repository;
 
-import com.coderscampus.backgammon_vanilla.domain.Game;
+import com.coderscampus.backgammon.domain.Game;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

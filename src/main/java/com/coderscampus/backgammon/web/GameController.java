@@ -1,11 +1,11 @@
-package com.coderscampus.backgammon_vanilla.web;
+package com.coderscampus.backgammon.web;
 
-import com.coderscampus.backgammon_vanilla.domain.BoardStatus;
-import com.coderscampus.backgammon_vanilla.domain.Game;
-import com.coderscampus.backgammon_vanilla.domain.User;
-import com.coderscampus.backgammon_vanilla.service.AuthUserHelper;
-import com.coderscampus.backgammon_vanilla.service.GameService;
-import com.coderscampus.backgammon_vanilla.service.UserService;
+import com.coderscampus.backgammon.domain.BoardStatus;
+import com.coderscampus.backgammon.domain.Game;
+import com.coderscampus.backgammon.domain.User;
+import com.coderscampus.backgammon.service.AuthUserHelper;
+import com.coderscampus.backgammon.service.GameService;
+import com.coderscampus.backgammon.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -86,6 +86,9 @@ public class GameController {
 
     @GetMapping("/games/{gameId}")
     public String game(Authentication authentication, ModelMap model, @PathVariable int gameId) {
+        if (isAnonymous(authentication)) {
+            return "redirect:/";
+        }
         Game game = gameService.findById((long) gameId);
         BoardStatus boardStatus = new BoardStatus();
         model.put("game", game);
@@ -95,11 +98,12 @@ public class GameController {
 
     @GetMapping("/game")
     public String game(Authentication authentication, ModelMap model) {
-        Game game = gameService.findById((long) 12);
-        BoardStatus boardStatus = new BoardStatus();
-        model.put("game", game);
-        model.put("boardStatus", boardStatus);
-        return "game";
+        if (isAnonymous(authentication)) {
+            return "redirect:/";
+        }
+        User user = getUser(authentication);
+        Game game = gameService.createTestGame(user);
+        return "redirect:/games/" + game.getGameId();
     }
 
     private boolean isAnonymous(Authentication authentication) {

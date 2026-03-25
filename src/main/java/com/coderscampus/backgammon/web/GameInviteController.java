@@ -1,12 +1,12 @@
-package com.coderscampus.backgammon_vanilla.web;
+package com.coderscampus.backgammon.web;
 
-import com.coderscampus.backgammon_vanilla.domain.Game;
-import com.coderscampus.backgammon_vanilla.domain.User;
-import com.coderscampus.backgammon_vanilla.dto.GameInvite;
-import com.coderscampus.backgammon_vanilla.dto.GameInviteResponse;
-import com.coderscampus.backgammon_vanilla.service.AuthUserHelper;
-import com.coderscampus.backgammon_vanilla.service.GameService;
-import com.coderscampus.backgammon_vanilla.service.UserService;
+import com.coderscampus.backgammon.domain.Game;
+import com.coderscampus.backgammon.domain.User;
+import com.coderscampus.backgammon.dto.GameInvite;
+import com.coderscampus.backgammon.dto.GameInviteResponse;
+import com.coderscampus.backgammon.service.AuthUserHelper;
+import com.coderscampus.backgammon.service.GameService;
+import com.coderscampus.backgammon.service.UserService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;

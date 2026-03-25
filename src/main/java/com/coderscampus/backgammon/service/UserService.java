@@ -1,7 +1,7 @@
-package com.coderscampus.backgammon_vanilla.service;
+package com.coderscampus.backgammon.service;
 
-import com.coderscampus.backgammon_vanilla.domain.User;
-import com.coderscampus.backgammon_vanilla.repository.UserRepository;
+import com.coderscampus.backgammon.domain.User;
+import com.coderscampus.backgammon.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

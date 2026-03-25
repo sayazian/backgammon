@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>backgammon-vanilla</artifactId>
+	<artifactId>backgammon</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>backgammon-vanilla</name>
+	<name>backgammon</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>
 	<licenses>

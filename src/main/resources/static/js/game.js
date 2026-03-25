@@ -16,6 +16,9 @@ const outCounts = {white: 0, black: 0};
 const injectedBoard = (typeof window.boardStatus === 'object' && window.boardStatus) ? window.boardStatus : null;
 let boardState = normalizeBoardStatus(injectedBoard);
 let currentTurn = boardState.turn || 'black';
+const gameId = window.gameId || null;
+const clientId = `client-${Math.random().toString(36).slice(2)}`;
+let stompClient = null;
 let selectedPoint = null;
 let selectedFromHit = false;
 
@@ -69,6 +72,7 @@ function rollDice() {
         die2.classList.remove('rolling');
 
         console.log('Rolled', d1, d2);
+        publishState();
     }, 400);
     // update Turn;
     // sendBoardStatus();
@@ -188,6 +192,7 @@ function tryMoveChecker(fromPointNum, toPointNum) {
     }
 
     renderBoardFromStatus(boardState);
+    publishState();
 }
 
 function tryEnterFromHit(toPointNum) {
@@ -216,6 +221,7 @@ function tryEnterFromHit(toPointNum) {
     renderBoardFromStatus(boardState);
     clearSelection();
     console.log('Entered from hit to point', toPointNum);
+    publishState();
 }
 
 function tryBearOff(fromPointNum) {
@@ -230,6 +236,7 @@ function tryBearOff(fromPointNum) {
     renderBoardFromStatus(boardState);
     clearSelection();
     console.log('Borne off from point', fromPointNum);
+    publishState();
 }
 
 function buildBoard() {
@@ -342,6 +349,44 @@ function renderBoardFromStatus(status) {
     }
 }
 
+function connectSocket() {
+    if (!gameId || typeof SockJS === 'undefined' || typeof Stomp === 'undefined') {
+        console.warn('WebSocket not initialized: missing gameId or SockJS/STOMP');
+        return;
+    }
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, () => {
+        stompClient.subscribe(`/topic/games/${gameId}`, message => {
+            if (!message.body) return;
+            try {
+                const payload = JSON.parse(message.body);
+                if (payload.clientId && payload.clientId === clientId) return; // ignore own updates
+                const incoming = normalizeBoardStatus(payload.boardStatus);
+                boardState = incoming;
+                currentTurn = boardState.turn || currentTurn;
+                renderBoardFromStatus(boardState);
+            } catch (e) {
+                console.error('Failed to process incoming state', e);
+            }
+        });
+        // Share our current state when connected
+        publishState();
+    }, err => {
+        console.error('WebSocket connection failed', err);
+    });
+}
+
+function publishState() {
+    if (!stompClient || !stompClient.connected || !gameId) return;
+    const payload = {
+        gameId,
+        boardStatus: boardState,
+        clientId
+    };
+    stompClient.send(`/app/games/${gameId}/state`, {}, JSON.stringify(payload));
+}
+
 document.getElementById('roll').onclick = rollDice;
 die1.onclick = rollDice;
 die2.onclick = rollDice;
@@ -351,3 +396,4 @@ renderBoardFromStatus(boardState);
 if (!boardState || !boardState.dice || boardState.dice.length < 2 || boardState.dice[0] === 0 && boardState.dice[1] === 0) {
     rollDice();
 }
+connectSocket();

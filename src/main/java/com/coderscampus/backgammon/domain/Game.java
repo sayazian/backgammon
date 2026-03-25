@@ -1,4 +1,4 @@
-package com.coderscampus.backgammon_vanilla.domain;
+package com.coderscampus.backgammon.domain;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

@@ -1,4 +1,4 @@
-package com.coderscampus.backgammon_vanilla.domain;
+package com.coderscampus.backgammon.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -6,7 +6,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import org.springframework.boot.autoconfigure.web.WebProperties;
 
 import java.time.LocalDate;
 
@@ -19,19 +18,25 @@ public class User {
     String email;
     LocalDate joinDate;
     @Column(name = "number_of_games")
-    int numberOfGames;
-    int wins;
-    int losses;
-    boolean online;
-    boolean free;
+    Integer numberOfGames;
+    Integer wins;
+    Integer losses;
+    Boolean online;
+    Boolean free;
 
     public User () {
-        new User("", "");
+        this("", "");
     }
     public User (String name, String email) {
         this.name = name;
         this.email = email;
         this.joinDate = LocalDate.now();
+        // default counters so existing null DB rows don't explode when hydrated
+        this.numberOfGames = 0;
+        this.wins = 0;
+        this.losses = 0;
+        this.online = false;
+        this.free = false;
     }
     public Long getUserId() {
         return userId;
@@ -65,45 +70,44 @@ public class User {
         this.joinDate = joinDate;
     }
 
-    public int getNumberOfGames() {
+    public Integer getNumberOfGames() {
         return numberOfGames;
     }
 
-    public void setNumberOfGames(int numberOfGames) {
+    public void setNumberOfGames(Integer numberOfGames) {
         this.numberOfGames = numberOfGames;
     }
 
-    public int getWins() {
+    public Integer getWins() {
         return wins;
     }
 
-    public void setWins(int wins) {
+    public void setWins(Integer wins) {
         this.wins = wins;
     }
 
-    public int getLosses() {
+    public Integer getLosses() {
         return losses;
     }
 
-    public void setLosses(int losses) {
+    public void setLosses(Integer losses) {
         this.losses = losses;
     }
 
-    public boolean isOnline() {
+    public Boolean isOnline() {
         return online;
     }
 
-    public void setOnline(boolean online) {
+    public void setOnline(Boolean online) {
         this.online = online;
     }
 
-    public boolean isFree() {
+    public Boolean isFree() {
         return free;
     }
 
-    public void setFree(boolean free) {
+    public void setFree(Boolean free) {
         this.free = free;
     }
 }
-
 

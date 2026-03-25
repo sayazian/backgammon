@@ -1,6 +1,6 @@
-package com.coderscampus.backgammon_vanilla.service;
+package com.coderscampus.backgammon.service;
 
-import com.coderscampus.backgammon_vanilla.domain.User;
+import com.coderscampus.backgammon.domain.User;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;

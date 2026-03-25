@@ -1,4 +1,4 @@
-package com.coderscampus.backgammon_vanilla.domain;
+package com.coderscampus.backgammon.domain;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 public class BoardStatus {
-    private final List<Point> points;
-    private final Map<String, Integer> hits;
-    private final Map<String, Integer> outs;
-    private final int[] dice;
-    private final String turn;
+    private List<Point> points;
+    private Map<String, Integer> hits;
+    private Map<String, Integer> outs;
+    private int[] dice;
+    private String turn;
     public BoardStatus(List<Point> points, Map<String, Integer> hits, Map<String, Integer> outs, String turn) {
         this.points = points;
         this.hits = hits;
@@ -23,20 +23,40 @@ public class BoardStatus {
         return points;
     }
 
+    public void setPoints(List<Point> points) {
+        this.points = points;
+    }
+
     public Map<String, Integer> getHits() {
         return hits;
+    }
+
+    public void setHits(Map<String, Integer> hits) {
+        this.hits = hits;
     }
 
     public Map<String, Integer> getOuts() {
         return outs;
     }
 
+    public void setOuts(Map<String, Integer> outs) {
+        this.outs = outs;
+    }
+
     public int[] getDice() {
         return dice;
     }
 
+    public void setDice(int[] dice) {
+        this.dice = dice;
+    }
+
     public String getTurn() {
         return turn;
+    }
+
+    public void setTurn(String turn) {
+        this.turn = turn;
     }
 
     public BoardStatus() {

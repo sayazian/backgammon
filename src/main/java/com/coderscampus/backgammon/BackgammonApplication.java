@@ -1,13 +1,13 @@
-package com.coderscampus.backgammon_vanilla;
+package com.coderscampus.backgammon;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class BackgammonVanillaApplication {
+public class BackgammonApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(BackgammonVanillaApplication.class, args);
+		SpringApplication.run(BackgammonApplication.class, args);
 	}
 
 }

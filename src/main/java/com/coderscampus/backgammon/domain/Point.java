@@ -1,4 +1,4 @@
-package com.coderscampus.backgammon_vanilla.domain;
+package com.coderscampus.backgammon.domain;
 
 public class Point {
     private int position;

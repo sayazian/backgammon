@@ -1,4 +1,4 @@
-package com.coderscampus.backgammon_vanilla.config;
+package com.coderscampus.backgammon.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

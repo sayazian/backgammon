@@ -1,4 +1,4 @@
-package com.coderscampus.backgammon_vanilla.dto;
+package com.coderscampus.backgammon.dto;
 
 public class GameInvite {
     private Long fromUserId;
