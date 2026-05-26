@@ -7,18 +7,14 @@ import com.coderscampus.backgammon.dto.GameInviteResponse;
 import com.coderscampus.backgammon.dto.GameInviteStatus;
 import com.coderscampus.backgammon.service.AuthUserHelper;
 import com.coderscampus.backgammon.service.GameService;
+import com.coderscampus.backgammon.service.GameRuntimeService;
 import com.coderscampus.backgammon.service.PendingGameInviteService;
+import com.coderscampus.backgammon.service.PresenceService;
 import com.coderscampus.backgammon.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.simp.user.SimpSession;
-import org.springframework.messaging.simp.user.SimpSubscription;
-import org.springframework.messaging.simp.user.SimpUser;
-import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.security.core.Authentication;
-
-import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,7 +29,8 @@ class GameInviteControllerTest {
     private AuthUserHelper authUserHelper;
     private GameService gameService;
     private PendingGameInviteService pendingGameInviteService;
-    private SimpUserRegistry simpUserRegistry;
+    private PresenceService presenceService;
+    private GameRuntimeService gameRuntimeService;
     private GameInviteController controller;
     private Authentication authentication;
     private User inviter;
@@ -46,14 +43,16 @@ class GameInviteControllerTest {
         authUserHelper = mock(AuthUserHelper.class);
         gameService = mock(GameService.class);
         pendingGameInviteService = new PendingGameInviteService();
-        simpUserRegistry = mock(SimpUserRegistry.class);
+        presenceService = mock(PresenceService.class);
+        gameRuntimeService = mock(GameRuntimeService.class);
         controller = new GameInviteController(
                 messagingTemplate,
                 userService,
                 authUserHelper,
                 gameService,
                 pendingGameInviteService,
-                simpUserRegistry
+                presenceService,
+                gameRuntimeService
         );
         authentication = mock(Authentication.class);
 
@@ -72,7 +71,7 @@ class GameInviteControllerTest {
         invite.setMessage("Play?");
 
         when(authUserHelper.resolveUser(authentication, userService)).thenReturn(inviter);
-        when(simpUserRegistry.getUsers()).thenReturn(Set.of());
+        when(presenceService.isUserAvailableForInvite(invitee.getUserId())).thenReturn(false);
 
         controller.sendInvite(invite, authentication);
 
@@ -106,6 +105,8 @@ class GameInviteControllerTest {
         controller.responseToInvite(response, authentication);
 
         verify(gameService).createGame(inviter.getUserId(), invitee.getUserId(), inviter.getName(), invitee.getName());
+        verify(gameRuntimeService).registerGame(game);
+        verify(presenceService).registerGame(game);
         verify(messagingTemplate).convertAndSend(
                 eq("/topic/invitations/responses/" + inviter.getUserId()),
                 any(GameInviteResponse.class)
@@ -118,15 +119,8 @@ class GameInviteControllerTest {
         invite.setToUserId(invitee.getUserId());
         invite.setToUserName(invitee.getName());
 
-        SimpUser simpUser = mock(SimpUser.class);
-        SimpSession session = mock(SimpSession.class);
-        SimpSubscription subscription = mock(SimpSubscription.class);
-
         when(authUserHelper.resolveUser(authentication, userService)).thenReturn(inviter);
-        when(simpUserRegistry.getUsers()).thenReturn(Set.of(simpUser));
-        when(simpUser.getSessions()).thenReturn(Set.of(session));
-        when(session.getSubscriptions()).thenReturn(Set.of(subscription));
-        when(subscription.getDestination()).thenReturn("/topic/invitations/" + invitee.getUserId());
+        when(presenceService.isUserAvailableForInvite(invitee.getUserId())).thenReturn(true);
 
         controller.sendInvite(invite, authentication);
 

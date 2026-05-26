@@ -242,6 +242,24 @@ body {
     color: rgba(41, 41, 41, 0.65);
 }
 
+.status-banner {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.status-banner--ok {
+    background: #dcefd2;
+    color: #2f5c29;
+}
+
+.status-banner--warning {
+    background: #f7dfb5;
+    color: #7f4e00;
+}
+
 .modal-backdrop {
     position: fixed;
     inset: 0;

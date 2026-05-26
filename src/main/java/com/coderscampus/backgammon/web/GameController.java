@@ -5,6 +5,8 @@ import com.coderscampus.backgammon.domain.Game;
 import com.coderscampus.backgammon.domain.User;
 import com.coderscampus.backgammon.service.AuthUserHelper;
 import com.coderscampus.backgammon.service.GameService;
+import com.coderscampus.backgammon.service.GameRuntimeService;
+import com.coderscampus.backgammon.service.PresenceService;
 import com.coderscampus.backgammon.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,12 +27,19 @@ public class GameController {
     private final UserService userService;
     private final AuthUserHelper authUserHelper;
     private final GameService gameService;
+    private final PresenceService presenceService;
+    private final GameRuntimeService gameRuntimeService;
 
     public GameController(UserService userService,
-                          AuthUserHelper authUserHelper, GameService gameService) {
+                          AuthUserHelper authUserHelper,
+                          GameService gameService,
+                          PresenceService presenceService,
+                          GameRuntimeService gameRuntimeService) {
         this.userService = userService;
         this.authUserHelper = authUserHelper;
         this.gameService = gameService;
+        this.presenceService = presenceService;
+        this.gameRuntimeService = gameRuntimeService;
     }
 
     @GetMapping({"/", "/login"})
@@ -49,8 +58,11 @@ public class GameController {
         String name = authUserHelper.extractName(authentication);
         String email = authUserHelper.extractEmail(authentication);
         User user = userService.findUser(name, email);
-        userService.logUserIn(user);
-        List<User> onlineUsers = userService.extractOnlineUsers();
+        Long reconnectableGameId = presenceService.findReconnectableGameId(user.getUserId());
+        if (reconnectableGameId != null) {
+            return "redirect:/games/" + reconnectableGameId;
+        }
+        List<User> onlineUsers = presenceService.getOnlineUsers();
         model.put("user", user);
         model.put("onlineUsers", onlineUsers);
         return "dashboard";
@@ -75,12 +87,9 @@ public class GameController {
     @PostMapping("/logout")
     public String logout(HttpServletRequest request,
                          HttpServletResponse response, @ModelAttribute("user") User user) {
-//        userService.logUserOut(user);
-//
-//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-//        if (auth != null) {
-//            new SecurityContextLogoutHandler().logout(request, response, auth);
-//        }
+        if (user != null && user.getUserId() != null) {
+            presenceService.clearUserPresence(user.getUserId());
+        }
         return "redirect:/login?logout";
     }
 
@@ -90,9 +99,14 @@ public class GameController {
             return "redirect:/";
         }
         Game game = gameService.findById((long) gameId);
-        BoardStatus boardStatus = new BoardStatus();
+        User user = getUser(authentication);
+        gameRuntimeService.registerGame(game);
+        presenceService.registerGame(game);
+        BoardStatus boardStatus = gameRuntimeService.getBoardState(game.getGameId());
         model.put("game", game);
         model.put("boardStatus", boardStatus);
+        model.put("user", user);
+        model.put("presenceStatus", presenceService.buildGamePresenceStatus(game, user.getUserId()));
         return "game";
     }
 
@@ -103,6 +117,8 @@ public class GameController {
         }
         User user = getUser(authentication);
         Game game = gameService.createTestGame(user);
+        gameRuntimeService.registerGame(game);
+        presenceService.registerGame(game);
         return "redirect:/games/" + game.getGameId();
     }
 

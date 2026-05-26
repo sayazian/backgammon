@@ -1,9 +1,11 @@
 package com.coderscampus.backgammon.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 
 @Entity
 public class Game {
@@ -17,6 +19,9 @@ public class Game {
     int user1Score;
     int user2Score;
     boolean starter;
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    String boardStateJson;
 
     public Long getGameId() {
         return gameId;
@@ -82,5 +87,13 @@ public class Game {
 
     public void setStarter(boolean starter) {
         this.starter = starter;
+    }
+
+    public String getBoardStateJson() {
+        return boardStateJson;
+    }
+
+    public void setBoardStateJson(String boardStateJson) {
+        this.boardStateJson = boardStateJson;
     }
 }

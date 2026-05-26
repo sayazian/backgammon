@@ -2,6 +2,7 @@ let stompClient = null;
 let currentUserId = null;
 let inviteQueue = [];
 let activeInvite = null;
+let dashboardHeartbeatId = null;
 
 function connectStomp() {
     currentUserId = document.body.getAttribute('data-user-id');
@@ -36,9 +37,22 @@ function connectStomp() {
             const status = JSON.parse(message.body);
             onInviteStatus(status);
         });
+
+        sendDashboardHeartbeat();
+        if (dashboardHeartbeatId) {
+            clearInterval(dashboardHeartbeatId);
+        }
+        dashboardHeartbeatId = setInterval(sendDashboardHeartbeat, 15000);
     }, error => {
         console.error('STOMP error', error);
     });
+}
+
+function sendDashboardHeartbeat() {
+    if (!stompClient || !stompClient.connected) {
+        return;
+    }
+    stompClient.send('/app/presence/dashboard', {}, '{}');
 }
 
 function sendInvite(toUserId, toUserName) {

@@ -17,10 +17,13 @@ const injectedBoard = (typeof window.boardStatus === 'object' && window.boardSta
 let boardState = normalizeBoardStatus(injectedBoard);
 let currentTurn = boardState.turn || 'black';
 const gameId = window.gameId || null;
+const currentUserId = window.currentUserId || null;
 const clientId = `client-${Math.random().toString(36).slice(2)}`;
 let stompClient = null;
 let selectedPoint = null;
 let selectedFromHit = false;
+let gameHeartbeatId = null;
+let gameInteractive = true;
 
 function normalizeBoardStatus(status) {
     if (!status || !Array.isArray(status.points)) {
@@ -158,6 +161,7 @@ function isEntryPoint(color, pointNum) {
 }
 
 function tryMoveChecker(fromPointNum, toPointNum) {
+    if (!gameInteractive) return;
     if (fromPointNum === toPointNum) return;
     const from = boardState.points.find(p => p.position === Number(fromPointNum));
     const to = boardState.points.find(p => p.position === Number(toPointNum));
@@ -196,6 +200,7 @@ function tryMoveChecker(fromPointNum, toPointNum) {
 }
 
 function tryEnterFromHit(toPointNum) {
+    if (!gameInteractive) return;
     const target = Number(toPointNum);
     if (!isEntryPoint(currentTurn, target)) return;
     const to = boardState.points.find(p => p.position === target);
@@ -225,6 +230,7 @@ function tryEnterFromHit(toPointNum) {
 }
 
 function tryBearOff(fromPointNum) {
+    if (!gameInteractive) return;
     const from = boardState.points.find(p => p.position === Number(fromPointNum));
     if (!from || from.number <= 0 || from.color !== currentTurn) {
         console.log('Bear off blocked: no checker to bear off from', fromPointNum);
@@ -370,11 +376,35 @@ function connectSocket() {
                 console.error('Failed to process incoming state', e);
             }
         });
-        // Share our current state when connected
-        publishState();
+        stompClient.subscribe(`/topic/games/${gameId}/presence`, message => {
+            if (!message.body) return;
+            try {
+                const status = JSON.parse(message.body);
+                renderPresenceStatus(status);
+            } catch (e) {
+                console.error('Failed to process presence update', e);
+            }
+        });
+
+        syncState();
+        sendGameHeartbeat();
+        if (gameHeartbeatId) {
+            clearInterval(gameHeartbeatId);
+        }
+        gameHeartbeatId = setInterval(sendGameHeartbeat, 10000);
     }, err => {
         console.error('WebSocket connection failed', err);
     });
+}
+
+function syncState() {
+    if (!stompClient || !stompClient.connected || !gameId) return;
+    stompClient.send(`/app/games/${gameId}/sync`, {}, '{}');
+}
+
+function sendGameHeartbeat() {
+    if (!stompClient || !stompClient.connected || !gameId) return;
+    stompClient.send(`/app/games/${gameId}/presence`, {}, '{}');
 }
 
 function publishState() {
@@ -385,6 +415,33 @@ function publishState() {
         clientId
     };
     stompClient.send(`/app/games/${gameId}/state`, {}, JSON.stringify(payload));
+}
+
+function renderPresenceStatus(status) {
+    const statusEl = document.getElementById('connection-status');
+    if (!statusEl) {
+        return;
+    }
+
+    const amUser1 = Number(status.user1Id) === Number(currentUserId);
+    const opponentConnected = amUser1 ? !!status.user2Connected : !!status.user1Connected;
+    gameInteractive = opponentConnected;
+    const rollButton = document.getElementById('roll');
+    if (rollButton) {
+        rollButton.disabled = !opponentConnected;
+    }
+
+    if (opponentConnected) {
+        statusEl.textContent = 'Both players are connected.';
+        statusEl.classList.remove('status-banner--warning');
+        statusEl.classList.add('status-banner--ok');
+        return;
+    }
+
+    const seconds = Number(status.reconnectGraceSecondsRemaining || 0);
+    statusEl.textContent = `${status.disconnectedUserName || 'Your opponent'} disconnected. Waiting up to ${seconds} seconds for them to reconnect.`;
+    statusEl.classList.remove('status-banner--ok');
+    statusEl.classList.add('status-banner--warning');
 }
 
 document.getElementById('roll').onclick = rollDice;

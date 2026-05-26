@@ -45,19 +45,7 @@ public class UserService {
         return userOpt.orElseGet(() -> createNewUser(new User(name, email)));
     }
 
-    public void logUserIn(User user) {
-        user.setOnline(true);
-        user.setFree(true);
-        updateUser(user);
-    }
-
     public List<User> extractOnlineUsers() {
         return userRepository.findByOnline(true);
-    }
-
-    public void logUserOut(User user) {
-        user.setOnline(false);
-        user.setFree(false);
-        saveUser(user);
     }
 }
