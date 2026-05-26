@@ -52,6 +52,17 @@
         <input th:name="${_csrf.parameterName}" th:value="${_csrf.token}" type="hidden"/>
     </form>
 
+    <div class="modal-backdrop" id="invite-modal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="invite-modal-title">
+            <h2 id="invite-modal-title">Game Invite</h2>
+            <p id="invite-modal-message"></p>
+            <div class="modal-actions">
+                <button class="button-link" id="invite-accept-button" type="button">Accept</button>
+                <button class="button-link button-link--ghost" id="invite-decline-button" type="button">Decline</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 

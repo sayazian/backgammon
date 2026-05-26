@@ -1,12 +1,21 @@
 package com.coderscampus.backgammon.dto;
 
 public class GameInviteResponse {
+    private String inviteId;
     private Long fromUserId;
     private String fromUserName;//invitee
     private Long toUserId;
     private String toUserName;//inviter
     private Long gameId;
     private boolean accepted;
+
+    public String getInviteId() {
+        return inviteId;
+    }
+
+    public void setInviteId(String inviteId) {
+        this.inviteId = inviteId;
+    }
 
     public Long getFromUserId() {
         return fromUserId;

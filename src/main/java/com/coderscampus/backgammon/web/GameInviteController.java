@@ -4,11 +4,17 @@ import com.coderscampus.backgammon.domain.Game;
 import com.coderscampus.backgammon.domain.User;
 import com.coderscampus.backgammon.dto.GameInvite;
 import com.coderscampus.backgammon.dto.GameInviteResponse;
+import com.coderscampus.backgammon.dto.GameInviteStatus;
 import com.coderscampus.backgammon.service.AuthUserHelper;
 import com.coderscampus.backgammon.service.GameService;
+import com.coderscampus.backgammon.service.PendingGameInviteService;
 import com.coderscampus.backgammon.service.UserService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.user.SimpSession;
+import org.springframework.messaging.simp.user.SimpSubscription;
+import org.springframework.messaging.simp.user.SimpUser;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
@@ -18,15 +24,21 @@ public class GameInviteController {
     private final UserService userService;
     private final AuthUserHelper authUserHelper;
     private final GameService gameService;
+    private final PendingGameInviteService pendingGameInviteService;
+    private final SimpUserRegistry simpUserRegistry;
 
     public GameInviteController(SimpMessagingTemplate messagingTemplate,
                                 UserService userService,
                                 AuthUserHelper authUserHelper,
-                                GameService gameService) {
+                                GameService gameService,
+                                PendingGameInviteService pendingGameInviteService,
+                                SimpUserRegistry simpUserRegistry) {
         this.messagingTemplate = messagingTemplate;
         this.userService = userService;
         this.authUserHelper = authUserHelper;
         this.gameService = gameService;
+        this.pendingGameInviteService = pendingGameInviteService;
+        this.simpUserRegistry = simpUserRegistry;
     }
 
     @MessageMapping("/invite")
@@ -37,8 +49,18 @@ public class GameInviteController {
         }
         invite.setFromUserId(user.getUserId());
         invite.setFromUserName(user.getName());
-        Game game = gameService.createGame(invite.getFromUserId(), invite.getToUserId(), invite.getFromUserName(), invite.getToUserName() );
-        invite.setGameId(game.getGameId());
+
+        if (!recipientSubscribed(invite.getToUserId())) {
+            GameInviteStatus status = new GameInviteStatus();
+            status.setToUserId(invite.getToUserId());
+            status.setToUserName(invite.getToUserName());
+            status.setDelivered(false);
+            status.setReason("That user is not currently connected to the invite channel.");
+            messagingTemplate.convertAndSend("/topic/invitations/status/" + invite.getFromUserId(), status);
+            return;
+        }
+
+        pendingGameInviteService.createPendingInvite(invite);
 
         messagingTemplate.convertAndSend(
                 "/topic/invitations/" + invite.getToUserId(),
@@ -52,12 +74,48 @@ public class GameInviteController {
         if(user == null) {
             return;
         }
+        GameInvite pendingInvite = pendingGameInviteService.findByInviteId(response.getInviteId());
+        if (pendingInvite == null) {
+            return;
+        }
+        if (!user.getUserId().equals(pendingInvite.getToUserId())) {
+            return;
+        }
+
         response.setFromUserId(user.getUserId());
         response.setFromUserName(user.getName());
+        response.setToUserId(pendingInvite.getFromUserId());
+        response.setToUserName(pendingInvite.getFromUserName());
+
+        if (response.isAccepted()) {
+            Game game = gameService.createGame(
+                    pendingInvite.getFromUserId(),
+                    user.getUserId(),
+                    pendingInvite.getFromUserName(),
+                    user.getName()
+            );
+            response.setGameId(game.getGameId());
+        }
+
+        pendingGameInviteService.consume(response.getInviteId());
 
         messagingTemplate.convertAndSend(
-                "/topic/invitations/responses/" + response.getToUserId(),
+                "/topic/invitations/responses/" + pendingInvite.getFromUserId(),
                 response
         );
+    }
+
+    private boolean recipientSubscribed(Long userId) {
+        String destination = "/topic/invitations/" + userId;
+        for (SimpUser simpUser : simpUserRegistry.getUsers()) {
+            for (SimpSession session : simpUser.getSessions()) {
+                for (SimpSubscription subscription : session.getSubscriptions()) {
+                    if (destination.equals(subscription.getDestination())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

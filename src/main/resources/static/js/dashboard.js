@@ -1,5 +1,7 @@
 let stompClient = null;
 let currentUserId = null;
+let inviteQueue = [];
+let activeInvite = null;
 
 function connectStomp() {
     currentUserId = document.body.getAttribute('data-user-id');
@@ -29,6 +31,11 @@ function connectStomp() {
             const response = JSON.parse(message.body);
             onInviteResponse(response);
         });
+
+        stompClient.subscribe(`/topic/invitations/status/${currentUserId}`, message => {
+            const status = JSON.parse(message.body);
+            onInviteStatus(status);
+        });
     }, error => {
         console.error('STOMP error', error);
     });
@@ -43,18 +50,43 @@ function sendInvite(toUserId, toUserName) {
     const message = prompt(`Message for user ${toUserName}`, 'Want to play a game?') || '';
     const payload = {
         toUserId: Number(toUserId),
+        toUserName: toUserName,
         message: message
     };
     stompClient.send('/app/invite', {}, JSON.stringify(payload));
 }
 
 function onInviteReceived(invite) {
-    const text = `User ${invite.fromUserName} invited you to a game.\n\nMessage: ${invite.message || ''}`;
-    const accepted = confirm(text + '\n\nClick OK to accept, Cancel to decline.');
+    inviteQueue.push(invite);
+    if (!activeInvite) {
+        showNextInvite();
+    }
+}
 
+function showNextInvite() {
+    if (inviteQueue.length === 0) {
+        activeInvite = null;
+        hideInviteModal();
+        return;
+    }
+
+    activeInvite = inviteQueue.shift();
+    document.getElementById('invite-modal-title').textContent = `${activeInvite.fromUserName} invited you to a game`;
+    document.getElementById('invite-modal-message').textContent = activeInvite.message || 'Want to play a game?';
+    document.getElementById('invite-modal').classList.add('is-visible');
+}
+
+function hideInviteModal() {
+    document.getElementById('invite-modal').classList.remove('is-visible');
+}
+
+function respondToActiveInvite(accepted) {
+    if (!activeInvite) {
+        return;
+    }
     const response = {
-        toUserId: invite.fromUserId,
-        gameId: invite.gameId || null,
+        inviteId: activeInvite.inviteId,
+        toUserId: activeInvite.fromUserId,
         accepted: accepted
     };
 
@@ -63,6 +95,10 @@ function onInviteReceived(invite) {
     if (accepted && response.gameId) {
         window.location.href = `/games/${response.gameId}`;
     }
+
+    activeInvite = null;
+    hideInviteModal();
+    showNextInvite();
 }
 
 function onInviteResponse(response) {
@@ -78,6 +114,12 @@ function onInviteResponse(response) {
     }
 }
 
+function onInviteStatus(status) {
+    if (!status.delivered) {
+        alert(`Could not deliver your invite to ${status.toUserName || status.toUserId}. ${status.reason || ''}`.trim());
+    }
+}
+
 function wireInviteForms() {
     document.querySelectorAll('.invite-form').forEach(form => {
         form.addEventListener('submit', event => {
@@ -89,7 +131,21 @@ function wireInviteForms() {
     });
 }
 
+function wireInviteModal() {
+    const acceptButton = document.getElementById('invite-accept-button');
+    const declineButton = document.getElementById('invite-decline-button');
+
+    if (acceptButton) {
+        acceptButton.addEventListener('click', () => respondToActiveInvite(true));
+    }
+
+    if (declineButton) {
+        declineButton.addEventListener('click', () => respondToActiveInvite(false));
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     connectStomp();
     wireInviteForms();
+    wireInviteModal();
 });
